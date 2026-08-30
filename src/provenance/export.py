@@ -30,20 +30,38 @@ STATUS_LABELS = {
 }
 
 
+# Obergrenzen, damit eine Auskunft nicht unbegrenzt Speicher zieht. Sie werden
+# um eine Zeile überzogen abgefragt: nur so lässt sich „genau so viele" von
+# „mindestens so viele" unterscheiden. Wird eine erreicht, muss das im Bericht
+# stehen -- sonst behauptet der Hinweis unten eine Vollständigkeit, die eine
+# Auskunft nach Art. 15 gerade zusichern soll.
+FACT_LIMIT = 10_000
+TURN_LIMIT = 10_000
+RECEIPT_LIMIT = 1_000
+
+
 def subject_export(
     conn: psycopg.Connection, *, subject_id: str, include_history: bool = True
 ) -> dict[str, Any]:
     """Vollständige Auskunft über eine betroffene Person."""
-    # Obergrenze, damit eine Auskunft nicht unbegrenzt Speicher zieht. Wird
-    # sie erreicht, muss das im Bericht stehen -- sonst behauptet der Hinweis
-    # unten Vollständigkeit, die nicht gegeben ist.
-    limit = 10_000
-    facts = all_facts(conn, subject_id=subject_id, limit=limit)
-    turns = list_turns(conn, subject_id=subject_id, limit=limit)
-    truncated = len(facts) >= limit or len(turns) >= limit
-    turn_index = {int(turn["id"]): turn for turn in turns}
+    facts = all_facts(conn, subject_id=subject_id, limit=FACT_LIMIT + 1)
+    turns = list_turns(conn, subject_id=subject_id, limit=TURN_LIMIT + 1)
+    belege = receipts(conn, subject_id=subject_id, limit=RECEIPT_LIMIT + 1)
 
-    history = _history(conn, subject_id) if include_history else {}
+    abgeschnitten = [
+        name
+        for name, rows, cap in (
+            ("Aussagen", facts, FACT_LIMIT),
+            ("Gesprächsbeiträge", turns, TURN_LIMIT),
+            ("Löschbelege", belege, RECEIPT_LIMIT),
+        )
+        if len(rows) > cap
+    ]
+    facts = facts[:FACT_LIMIT]
+    turns = turns[:TURN_LIMIT]
+    belege = belege[:RECEIPT_LIMIT]
+
+    turn_index = {int(turn["id"]): turn for turn in turns}
 
     exported: list[dict[str, Any]] = []
     for fact in facts:
@@ -65,23 +83,31 @@ def subject_export(
                     "gesagt_am": _iso(origin["occurred_at"]),
                     "wortlaut": "(gelöscht)" if origin.get("redacted_at") else origin["content"],
                 },
-                "verlauf": history.get(int(fact["id"]), []),
             }
         )
+
+    # Erst jetzt, und nur für die Fakten, die tatsächlich ausgeliefert werden:
+    # sonst lud die Auskunft die gesamte Lineage der Person, um den größeren
+    # Teil davon wieder wegzuwerfen.
+    history = (
+        _history(conn, subject_id, [item["id"] for item in exported]) if include_history else {}
+    )
+    for item in exported:
+        item["verlauf"] = history.get(item["id"], [])
 
     return {
         "betroffene_person": subject_id,
         "erstellt_am": datetime.now().astimezone().isoformat(),
-        "vollstaendig": not truncated,
+        "vollstaendig": not abgeschnitten,
         "hinweis": (
             "Diese Auskunft enthält alle gespeicherten Aussagen über die genannte Person, "
             "ihre Quelle und ihren Verlauf. Abgelöste und zurückgezogene Aussagen sind "
             "als solche gekennzeichnet und werden nicht mehr ausgeliefert."
         )
-        if not truncated
+        if not abgeschnitten
         else (
-            f"Diese Auskunft ist bei {limit} Einträgen abgeschnitten und damit "
-            "unvollständig. Für eine vollständige Auskunft muss sie seitenweise "
+            f"Diese Auskunft ist unvollständig: {' und '.join(abgeschnitten)} wurden an der "
+            "Obergrenze abgeschnitten. Für eine vollständige Auskunft muss sie seitenweise "
             "abgerufen werden."
         ),
         "aussagen": exported,
@@ -103,7 +129,7 @@ def subject_export(
                 "ausgefuehrt_am": _iso(item["executed_at"]),
                 "betroffen": item["affected"],
             }
-            for item in receipts(conn, subject_id=subject_id)
+            for item in belege
         ],
     }
 
@@ -145,7 +171,17 @@ def fact_history(conn: psycopg.Connection, *, fact_id: int) -> list[dict[str, An
     ]
 
 
-def _history(conn: psycopg.Connection, subject_id: str) -> dict[int, list[dict[str, Any]]]:
+def _history(
+    conn: psycopg.Connection, subject_id: str, fact_ids: list[int]
+) -> dict[int, list[dict[str, Any]]]:
+    """Der Verlauf zu genau den Fakten, die die Auskunft ausliefert.
+
+    ``parent_id`` bleibt in der Bedingung: ein Fakt, der einen ausgelieferten
+    abgelöst hat, gehört zu dessen Verlauf, auch wenn er selbst nicht in der
+    Liste steht.
+    """
+    if not fact_ids:
+        return {}
     rows = conn.execute(
         """
         SELECT l.fact_id, l.parent_id, l.op, l.rationale, l.created_at, l.proposed_op, t.turn_id
@@ -153,9 +189,10 @@ def _history(conn: psycopg.Connection, subject_id: str) -> dict[int, list[dict[s
         JOIN traces t ON t.id = l.trace_id
         JOIN facts f ON f.id = l.fact_id
         WHERE f.subject_id = %s
+          AND (l.fact_id = ANY(%s) OR l.parent_id = ANY(%s))
         ORDER BY l.created_at, l.id
         """,
-        (subject_id,),
+        (subject_id, fact_ids, fact_ids),
     ).fetchall()
     grouped: dict[int, list[dict[str, Any]]] = {}
     for row in rows:

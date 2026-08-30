@@ -29,10 +29,20 @@ shutdown() {
   fi
 }
 
-# Bewusst ohne EXIT: der Handler wird am Ende von Hand gerufen. Mit EXIT liefe
-# er zusätzlich beim regulären Ende und wartete dort auf bereits beendete
-# Prozesse.
-trap shutdown TERM INT
+# Der Handler beendet das Skript selbst, statt nur zurückzukehren. Ein Trap,
+# der zurückkehrt, setzt die unterbrochene Stelle fort: ein SIGTERM während
+# des Postgres-Anlaufs fuhr die Datenbank herunter und das Skript startete
+# danach seelenruhig die Anwendung gegen nichts -- mit inzwischen
+# abgeschalteten Traps, also ohne zweite Gelegenheit zu stoppen.
+#
+# Bewusst ohne EXIT: `shutdown` wird am regulären Ende von Hand gerufen. Mit
+# EXIT liefe es dort ein zweites Mal und wartete auf bereits beendete Prozesse.
+on_signal() {
+  shutdown
+  exit "$1"
+}
+trap 'on_signal 143' TERM
+trap 'on_signal 130' INT
 
 if [ "$EMBEDDED" = "1" ]; then
   echo "provenance: starte eingebettetes Postgres" >&2

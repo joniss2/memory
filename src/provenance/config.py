@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from urllib.parse import urlparse
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -98,9 +99,10 @@ class Settings(BaseSettings):
     # -- Modellanbindung: Transportsicherheit ------------------------------
     llm_allow_insecure_http: bool = Field(
         default=False,
-        description="Erlaubt http:// zu einem Modell außerhalb von Loopback. "
-        "Ohne dies wird ein solcher Endpunkt abgelehnt, weil Prompt-Inhalte "
-        "und API-Schlüssel sonst im Klartext übertragen werden.",
+        description="Erlaubt http:// zu einem Modell außerhalb von Loopback -- "
+        "für die Textgenerierung wie für die Einbettungen. Ohne dies wird ein "
+        "solcher Endpunkt abgelehnt, weil Gesprächsinhalte und API-Schlüssel "
+        "sonst im Klartext übertragen werden.",
     )
 
 
@@ -117,6 +119,28 @@ def is_loopback(host: str) -> bool:
     if candidate.startswith("127."):
         return True
     return candidate in LOOPBACK_HOSTS
+
+
+def require_secure_transport(base_url: str, *, allow_insecure: bool) -> None:
+    """Lehnt Klartext-HTTP zu einem entfernten Modell ab.
+
+    Über diese Verbindung gehen die Gesprächsinhalte der betroffenen Person
+    und gegebenenfalls ein API-Schlüssel. Auf dem eigenen Rechner ist das
+    unkritisch, über das Netz nicht. Gilt für beide Modellanbindungen: die
+    Einbettung sieht denselben Text wie die Textgenerierung.
+    """
+    if allow_insecure:
+        return
+    parsed = urlparse(base_url)
+    if parsed.scheme != "http":
+        return
+    if is_loopback(parsed.hostname or ""):
+        return
+    raise ValueError(
+        f"Modellendpunkt {base_url!r} überträgt unverschlüsselt an einen entfernten Host. "
+        "Verwende https://, oder erlaube es ausdrücklich mit "
+        "PROVENANCE_LLM_ALLOW_INSECURE_HTTP=true."
+    )
 
 
 class InsecureExposure(RuntimeError):

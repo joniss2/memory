@@ -19,5 +19,6 @@ def build_embedder(settings: Settings | None = None) -> Embedder:
             model=settings.embedding_model,
             dim=settings.embedding_dim,
             api_key=settings.embedding_api_key,
+            allow_insecure_http=settings.llm_allow_insecure_http,
         )
     raise ValueError(f"unbekannter Einbettungsanbieter: {settings.embedding_provider!r}")

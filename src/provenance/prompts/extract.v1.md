@@ -20,16 +20,26 @@ Regeln:
 5. Gültigkeitsbeginn ("valid_from"): wenn der Beitrag einen Zeitpunkt nennt
    ("seit März", "seit 2019"), diesen verwenden -- sonst null. Der
    Zeitpunkt, zu dem etwas gesagt wurde, ist nicht der Zeitpunkt, ab dem es
-   gilt.
-6. Widerruf: Sätze wie "vergiss, was ich über X gesagt habe" sind kein
-   neuer Fakt, sondern ein Auftrag. Sie bekommen "op_hint": "retract" und
-   in "match_terms" das Thema, um das es geht.
+   gilt. Immer ein vollständiges ISO-Datum liefern, nie einen Monatsnamen.
+   Fehlt bei einer Monatsangabe das Jahr, gilt das Jahr aus "Zeitpunkt des
+   Beitrags"; läge der Monat damit in der Zukunft, ist der davorliegende
+   gemeint. "Seit März", am 2025-01-10 gesagt, ist also 2024-03-01.
+6. Widerruf: Sätze wie "vergiss, was ich über X gesagt habe" behaupten
+   nichts Neues, sind aber ein Auftrag an das Gedächtnis. Sie gehören
+   trotzdem nach "facts" und nicht nach "non_extractions" -- nur von dort
+   erreichen sie die nächste Stufe, die den Rückzug ausführt. Ein solcher
+   Eintrag trägt "op_hint": "retract", in "content" einen Satz darüber, was
+   zurückgezogen werden soll, und in "match_terms" die Wörter, an denen der
+   gemeinte Fakt zu erkennen ist. Kein "triple", kein "valid_from".
 7. "confidence" ist deine Sicherheit, dass dies ein dauerhafter Fakt über
    die betroffene Person ist -- nicht, wie wahrscheinlich er wahr ist.
-   Abschwächungen ("ich glaube", "vielleicht") senken den Wert.
-8. Jeder Satz des Beitrags landet entweder in "facts" oder in
-   "non_extractions". Ein Satz ohne Faktengehalt ist ein Befund, keine
-   Leerstelle -- er gehört mit Begründung nach "non_extractions".
+   Abschwächungen ("ich glaube", "vielleicht") senken den Wert. Bei einem
+   Widerruf ist es deine Sicherheit, dass der Satz wirklich ein Auftrag zum
+   Vergessen ist; Vergessen wird strenger geprüft als Hinzufügen.
+8. Jeder Satz des Beitrags landet entweder in "facts" -- als Fakt oder als
+   Widerruf -- oder in "non_extractions". Ein Satz ohne Faktengehalt ist ein
+   Befund, keine Leerstelle: er gehört mit Begründung nach
+   "non_extractions".
 
 Struktur, wenn du sie erkennst, zusätzlich als Tripel angeben. Verwende
 sprechende, kleingeschriebene Prädikate und bleibe über Beiträge hinweg bei
@@ -55,6 +65,14 @@ Antwortformat:
         "dst_kind": "ort"
       },
       "source_text": "der Satz, aus dem der Fakt stammt"
+    },
+    {
+      "content": "Die Angabe zum Arbeitgeber soll zurückgezogen werden.",
+      "confidence": 0.0,
+      "op_hint": "retract",
+      "match_terms": ["Arbeitgeber", "ACME"],
+      "match_predicates": ["arbeitet_bei"],
+      "source_text": "Vergiss, was ich über meinen Arbeitgeber gesagt habe."
     }
   ],
   "non_extractions": [

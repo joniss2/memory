@@ -50,7 +50,9 @@ def _ensure_database() -> None:
     params = conninfo_to_dict(TEST_URL)
     name = params.get("dbname")
     if not name:
-        raise RuntimeError(f"keine Datenbank in PROVENANCE_TEST_DATABASE_URL: {TEST_URL!r}")
+        # Ohne die URL selbst: sie trägt das Passwort, und diese Meldung
+        # landet im pytest- und im CI-Protokoll.
+        raise RuntimeError("PROVENANCE_TEST_DATABASE_URL nennt keinen Datenbanknamen")
     admin_url = make_conninfo(TEST_URL, dbname="postgres")
     with psycopg.connect(admin_url, autocommit=True) as conn:
         exists = conn.execute("SELECT 1 FROM pg_database WHERE datname = %s", (name,)).fetchone()

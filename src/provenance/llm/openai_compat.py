@@ -4,33 +4,11 @@ from __future__ import annotations
 
 import time
 from typing import Any
-from urllib.parse import urlparse
 
 import httpx
 
-from provenance.config import is_loopback
+from provenance.config import require_secure_transport
 from provenance.llm.base import LLMError, LLMRequest, LLMResponse, estimate_tokens
-
-
-def _require_secure_transport(base_url: str, *, allow_insecure: bool) -> None:
-    """Lehnt Klartext-HTTP zu einem entfernten Modell ab.
-
-    Über diese Verbindung gehen die Gesprächsinhalte der betroffenen Person
-    und gegebenenfalls ein API-Schlüssel. Auf dem eigenen Rechner ist das
-    unkritisch, über das Netz nicht.
-    """
-    if allow_insecure:
-        return
-    parsed = urlparse(base_url)
-    if parsed.scheme != "http":
-        return
-    if is_loopback(parsed.hostname or ""):
-        return
-    raise ValueError(
-        f"Modellendpunkt {base_url!r} überträgt unverschlüsselt an einen entfernten Host. "
-        "Verwende https://, oder erlaube es ausdrücklich mit "
-        "PROVENANCE_LLM_ALLOW_INSECURE_HTTP=true."
-    )
 
 
 class OpenAICompatProvider:
@@ -46,7 +24,7 @@ class OpenAICompatProvider:
         allow_insecure_http: bool = False,
     ) -> None:
         self.base_url = base_url.rstrip("/")
-        _require_secure_transport(self.base_url, allow_insecure=allow_insecure_http)
+        require_secure_transport(self.base_url, allow_insecure=allow_insecure_http)
         self.api_key = api_key
         self.timeout_s = timeout_s
         self.max_retries = max_retries

@@ -8,6 +8,7 @@ from collections.abc import Sequence
 
 import httpx
 
+from provenance.config import require_secure_transport
 from provenance.embeddings.base import EmbeddingError
 
 
@@ -23,8 +24,13 @@ class OpenAICompatEmbedder:
         timeout_s: float = 60.0,
         max_retries: int = 2,
         client: httpx.Client | None = None,
+        allow_insecure_http: bool = False,
     ) -> None:
         self.base_url = base_url.rstrip("/")
+        # Dieselbe Prüfung wie bei der Textgenerierung: der einzubettende Text
+        # ist der Gesprächsinhalt der betroffenen Person, nicht weniger
+        # schutzbedürftig, nur weil am Ende ein Vektor zurückkommt.
+        require_secure_transport(self.base_url, allow_insecure=allow_insecure_http)
         self.model = model
         self.dim = dim
         self.api_key = api_key

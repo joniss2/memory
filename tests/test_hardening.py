@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import pytest
 
+from provenance import export as export_mod
 from provenance.config import InsecureExposure, Settings, check_exposure, is_loopback
-from provenance.db.migration import load_migrations
+from provenance.db.migration import DimensionMismatch, load_migrations, migrate
 from provenance.db.pool import connection
+from provenance.embeddings.openai_compat import OpenAICompatEmbedder
 from provenance.evals.runner import find_residue, like_literal, run_suite
+from provenance.export import subject_export
 from provenance.llm.openai_compat import OpenAICompatProvider
 from provenance.retention import prune_traces
 from provenance.store import _like_literal
@@ -105,3 +108,90 @@ def test_migration_checksum_survives_a_dimension_change():
     b = load_migrations(embedding_dim=768)[0]
     assert a.sql != b.sql
     assert a.checksum == b.checksum
+
+
+# ------------------------------------------- Transport: auch die Einbettung
+
+
+@pytest.mark.parametrize(
+    ("base_url", "abgelehnt"),
+    [
+        ("http://127.0.0.1:11434/v1", False),
+        ("http://localhost:11434/v1", False),
+        ("https://api.example.com/v1", False),
+        ("http://modelle.example.com/v1", True),
+        ("http://host.docker.internal:11434/v1", True),
+    ],
+)
+def test_embedder_refuses_plaintext_to_a_remote_host(base_url, abgelehnt):
+    """Der einzubettende Text ist derselbe Gesprächsinhalt wie bei der
+    Textgenerierung. Er war bis hierher die Lücke: die Prüfung hing nur am
+    Chat-Anbieter."""
+    if abgelehnt:
+        with pytest.raises(ValueError, match="unverschlüsselt"):
+            OpenAICompatEmbedder(base_url=base_url, model="bge-m3")
+    else:
+        OpenAICompatEmbedder(base_url=base_url, model="bge-m3")
+
+
+def test_embedder_insecure_http_can_be_allowed_explicitly():
+    """vLLM im eigenen Netz ist ein legitimer Aufbau -- aber eine Entscheidung."""
+    OpenAICompatEmbedder(
+        base_url="http://modelle.example.com/v1", model="bge-m3", allow_insecure_http=True
+    )
+
+
+# ------------------------------------------------------ Einbettungsweite
+
+
+def test_changed_embedding_dimension_is_refused_with_its_own_error():
+    """Die Prüfsumme geht über den Rohtext und merkt eine geänderte Weite
+    nicht mehr. Ungeprüft liefe der Dienst mit einer Vektorspalte einer Weite
+    und einem Einbetter einer anderen an."""
+    with connection() as conn:
+        applied = conn.execute(
+            "SELECT embedding_dim FROM schema_migrations ORDER BY version LIMIT 1"
+        ).fetchone()
+    assert applied["embedding_dim"] is not None, "die angewandte Weite muss festgehalten sein"
+
+    with pytest.raises(DimensionMismatch, match="Dimensionen angelegt"):
+        migrate(embedding_dim=applied["embedding_dim"] + 8)
+
+    # Unverändert bleibt es ein reiner Durchlauf.
+    assert migrate(embedding_dim=applied["embedding_dim"]) == []
+
+
+# ---------------------------------------------------------- Auskunft: Grenzen
+
+
+def test_export_at_the_limit_is_not_reported_as_truncated(ingest, monkeypatch, conn):
+    """Genau so viele wie erlaubt ist vollständig. Die frühere Prüfung
+    verglich mit >= und log eine Auskunft in genau dem Randfall an."""
+    ingest("Ich wohne in Köln.")
+    facts = conn.execute("SELECT count(*) AS n FROM facts WHERE subject_id = 's'").fetchone()["n"]
+    assert facts >= 1
+
+    monkeypatch.setattr(export_mod, "FACT_LIMIT", facts)
+    monkeypatch.setattr(export_mod, "TURN_LIMIT", 10_000)
+    bericht = subject_export(conn, subject_id="s")
+    assert bericht["vollstaendig"] is True
+
+    monkeypatch.setattr(export_mod, "FACT_LIMIT", facts - 1)
+    bericht = subject_export(conn, subject_id="s")
+    assert bericht["vollstaendig"] is False
+    assert "Aussagen" in bericht["hinweis"]
+
+
+def test_export_history_stays_within_the_delivered_facts(ingest, conn):
+    """Der Verlauf wurde für die ganze Person geladen, auch für Fakten, die
+    die Auskunft nie ausliefert."""
+    ingest("Ich wohne in Köln.")
+    ingest("Ich bin nach Berlin gezogen.")
+    bericht = subject_export(conn, subject_id="s")
+    ausgeliefert = {item["id"] for item in bericht["aussagen"]}
+    assert ausgeliefert
+    for item in bericht["aussagen"]:
+        assert isinstance(item["verlauf"], list)
+    # Der Verlauf eines abgelösten Fakts bleibt am ausgelieferten Nachfolger
+    # sichtbar -- die parent_id-Bedingung darf nicht wegfallen.
+    assert any(item["verlauf"] for item in bericht["aussagen"])

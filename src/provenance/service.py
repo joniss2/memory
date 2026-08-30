@@ -94,7 +94,7 @@ class MemoryService:
         occurred_at: datetime | None = None,
         subject_label: str | None = None,
     ) -> IngestResult:
-        with transaction() as conn:
+        with transaction(self.settings.database_url) as conn:
             return self.ingest_turn_in(
                 conn,
                 subject_id=subject_id,
@@ -169,7 +169,7 @@ class MemoryService:
         limit: int | None = None,
         token_budget: int | None = None,
     ) -> RecallResult:
-        with transaction() as conn:
+        with transaction(self.settings.database_url) as conn:
             return self.recall_in(
                 conn,
                 subject_id=subject_id,

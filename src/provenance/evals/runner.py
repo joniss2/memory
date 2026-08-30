@@ -249,7 +249,9 @@ def run_suite(
     settings: Settings | None = None,
 ) -> Report:
     settings = settings or get_settings()
-    migrate()
+    # Beides ausdrücklich aus den übergebenen Settings: sonst migrierte der
+    # Lauf die voreingestellte Datenbank und prüfte in einer anderen.
+    migrate(settings.database_url, settings.embedding_dim)
     service = MemoryService(settings=settings)
     metrics = Metrics()
     results: list[ScenarioResult] = []
@@ -292,6 +294,7 @@ def run_scenario(
 ) -> ScenarioResult:
     scenario_id = str(scenario["id"])
     subject = f"eval:{scenario_id}"
+    db_url = service.settings.database_url
     result = ScenarioResult(
         id=scenario_id,
         title=str(scenario.get("title") or scenario_id),
@@ -300,7 +303,7 @@ def run_scenario(
     )
 
     try:
-        with transaction() as conn:
+        with transaction(db_url) as conn:
             purge_subject(conn, subject)
 
         turns = list(scenario.get("turns") or [])
@@ -328,15 +331,15 @@ def run_scenario(
 
             for block in erasure_blocks:
                 if int(block.get("after", len(turns))) == index:
-                    _run_erasure(block, scenario_id, subject, metrics, result)
+                    _run_erasure(block, scenario_id, subject, metrics, result, db_url=db_url)
 
-        _check_preconditions(preconditions, subject, result)
+        _check_preconditions(preconditions, subject, result, db_url=db_url)
 
     except Exception as exc:  # noqa: BLE001 - ein Szenario darf die Suite nicht abbrechen
         result.error = f"{type(exc).__name__}: {exc}"
     finally:
         if not keep:
-            with transaction() as conn:
+            with transaction(db_url) as conn:
                 purge_subject(conn, subject)
 
     return result
@@ -351,6 +354,7 @@ def _run_checkpoint(
     result: ScenarioResult,
 ) -> None:
     name = str(checkpoint.get("name") or f"nach Turn {checkpoint.get('after')}")
+    db_url = service.settings.database_url
     query = str(checkpoint["query"])
     recall = service.recall(subject_id=subject, query=query, limit=checkpoint.get("limit"))
     context = recall.injection.text
@@ -376,14 +380,25 @@ def _run_checkpoint(
         )
 
     for needle in checkpoint.get("expect_absent") or []:
-        _record(metrics, result, _check_stale(str(needle), scenario_id, name, subject, context))
+        _record(
+            metrics,
+            result,
+            _check_stale(str(needle), scenario_id, name, subject, context, db_url=db_url),
+        )
 
     for needle in checkpoint.get("must_stay_active") or []:
-        _record(metrics, result, _check_still_active(needle, scenario_id, name, subject))
+        _record(
+            metrics, result, _check_still_active(needle, scenario_id, name, subject, db_url=db_url)
+        )
 
 
 def _check_stale(
-    needle: str, scenario_id: str, checkpoint: str, subject: str, context: str
+    needle: str,
+    scenario_id: str,
+    checkpoint: str,
+    subject: str,
+    context: str,
+    db_url: str | None = None,
 ) -> Probe:
     """Stale Rate: wird der überholte Wert weiterhin geliefert?
 
@@ -402,7 +417,7 @@ def _check_stale(
             outcome=Outcome.FAIL,
             detail="überholter Wert wird weiterhin geliefert",
         )
-    with connection() as conn:
+    with connection(db_url) as conn:
         rows = conn.execute(
             "SELECT content FROM facts WHERE subject_id = %s", (subject,)
         ).fetchall()
@@ -421,9 +436,11 @@ def _check_stale(
     )
 
 
-def _check_still_active(needle: str, scenario_id: str, checkpoint: str, subject: str) -> Probe:
+def _check_still_active(
+    needle: str, scenario_id: str, checkpoint: str, subject: str, db_url: str | None = None
+) -> Probe:
     """False Retraction: hat ein Scheinwiderspruch einen korrekten Fakt gekillt?"""
-    with connection() as conn:
+    with connection(db_url) as conn:
         rows = conn.execute(
             "SELECT id, content, status FROM facts WHERE subject_id = %s ORDER BY id",
             (subject,),
@@ -462,7 +479,7 @@ def _check_still_active(needle: str, scenario_id: str, checkpoint: str, subject:
 
 
 def _check_preconditions(
-    preconditions: list[Any], subject: str, result: ScenarioResult
+    preconditions: list[Any], subject: str, result: ScenarioResult, db_url: str | None = None
 ) -> None:
     """Prüft, ob das Szenario überhaupt das ausgeübt hat, was es prüfen will.
 
@@ -474,7 +491,7 @@ def _check_preconditions(
     """
     if not preconditions:
         return
-    with connection() as conn:
+    with connection(db_url) as conn:
         rows = conn.execute("SELECT content FROM facts WHERE subject_id = %s", (subject,)).fetchall()
     contents = [row["content"] or "" for row in rows]
     for needle in preconditions:
@@ -494,12 +511,13 @@ def _run_erasure(
     subject: str,
     metrics: Metrics,
     result: ScenarioResult,
+    db_url: str | None = None,
 ) -> None:
     """Löscht und prüft danach, ob wirklich nichts übrig ist."""
     name = str(block.get("name") or f"Löschung nach Turn {block.get('after')}")
     pattern = block.get("facts_matching")
 
-    with transaction() as conn:
+    with transaction(db_url) as conn:
         fact_ids: list[int] | None = None
         if pattern:
             rows = conn.execute(
@@ -522,7 +540,7 @@ def _run_erasure(
         )
 
     for needle in block.get("residue") or []:
-        locations = find_residue(subject, str(needle))
+        locations = find_residue(subject, str(needle), db_url=db_url)
         _record(
             metrics,
             result,
@@ -572,7 +590,7 @@ RESIDUE_CHECKS: tuple[tuple[str, str], ...] = (
 )
 
 
-def find_residue(subject: str, needle: str) -> list[str]:
+def find_residue(subject: str, needle: str, db_url: str | None = None) -> list[str]:
     """Sucht einen gelöschten Wert überall dort, wo er stehen könnte.
 
     Fakten, Rohbeiträge, Graphknoten, Abstammungsbegründungen, Trace-Fragen
@@ -582,7 +600,7 @@ def find_residue(subject: str, needle: str) -> list[str]:
     """
     params = {"s": subject, "p": f"%{like_literal(needle)}%"}
     found: list[str] = []
-    with connection() as conn:
+    with connection(db_url) as conn:
         for label, sql in RESIDUE_CHECKS:
             row = conn.execute(sql, params).fetchone()
             if row and int(row["n"]) > 0:

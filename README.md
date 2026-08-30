@@ -154,7 +154,7 @@ Ausgeführt wird dann:
    Verschachtelung, Zeitstempel und Dauer bleiben, alle Blätter werden `null`
 4. `turns.content` geleert, `redacted_at` gesetzt
 5. `lineage.rationale` geleert -- eine Begründung wie „Aussage kehrt die
-   Polarität zu ‚Espresso' um" zitiert den Wert, der verschwinden soll. Die
+   Polarität zu ‚Espresso‘ um“ zitiert den Wert, der verschwinden soll. Die
    Zeile mit `op` und `parent_id` bleibt: sie ist die Herkunftsspur.
 6. `traces.query` geleert -- der Wortlaut einer Abfrage nennt oft genau den
    gesuchten Namen

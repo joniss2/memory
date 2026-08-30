@@ -22,6 +22,12 @@ services:
       PROVENANCE_DATABASE_URL: postgresql://provenance:provenance@db:5432/provenance
       PROVENANCE_LLM_PROVIDER: ${PROVENANCE_LLM_PROVIDER:-heuristic}
       PROVENANCE_LLM_BASE_URL: ${PROVENANCE_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      # Die Vorgabe oben zeigt über die Docker-Brücke auf den eigenen Rechner.
+      # Das ist kein Loopback, also lehnt die Transportprüfung sie ohne diesen
+      # Schalter ab -- und der dokumentierte Weg zum lokalen Modell scheiterte
+      # schon vor dem ersten Aufruf. Wer stattdessen ein Modell über das Netz
+      # anspricht, setzt hier false und eine https-Adresse.
+      PROVENANCE_LLM_ALLOW_INSECURE_HTTP: ${PROVENANCE_LLM_ALLOW_INSECURE_HTTP:-true}
       PROVENANCE_API_TOKEN: ${PROVENANCE_API_TOKEN:-}
       PROVENANCE_ALLOW_UNAUTHENTICATED: ${PROVENANCE_ALLOW_UNAUTHENTICATED:-false}
     extra_hosts:
