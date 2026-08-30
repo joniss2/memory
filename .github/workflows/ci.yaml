@@ -24,6 +24,7 @@ jobs:
 
     env:
       PROVENANCE_TEST_DATABASE_URL: postgresql://provenance:provenance@localhost:5432/provenance_test
+      PROVENANCE_DATABASE_URL: postgresql://provenance:provenance@localhost:5432/provenance_eval
 
     steps:
       - uses: actions/checkout@v4
@@ -35,10 +36,13 @@ jobs:
       - run: pip install -e ".[dev,mcp]"
 
       - name: Lint
-        run: ruff check src evals tests
+        run: ruff check src tests
 
       - name: Tests
         run: python -m pytest -q
+
+      - name: Datenbank für den Eval-Lauf
+        run: PGPASSWORD=provenance psql -h localhost -U provenance -d postgres -c 'CREATE DATABASE provenance_eval'
 
       - name: Eval-Suite
         # Die Eval ist Teil des Produkts, nicht Anhang: sie läuft in CI und

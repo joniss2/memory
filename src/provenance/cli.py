@@ -405,7 +405,7 @@ def eval_cmd(
     keep: bool = typer.Option(False, "--keep", help="Datenbank nach dem Lauf nicht leeren"),
 ) -> None:
     """Führt die Eval-Suite aus Abschnitt 9 aus."""
-    from evals.runner import run_suite
+    from provenance.evals.runner import run_suite
 
     report = run_suite(scenarios_dir=scenarios, only=only, keep=keep)
     report.render(console)

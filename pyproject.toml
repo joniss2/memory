@@ -34,11 +34,16 @@ provenance-mcp = "provenance.mcp_server:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-provenance = ["db/migrations/*.sql", "prompts/*.md", "dashboard/templates/*.html", "dashboard/static/*"]
+provenance = [
+    "db/migrations/*.sql",
+    "prompts/*.md",
+    "dashboard/templates/*",
+    "evals/scenarios/*.yaml",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "."]
+pythonpath = ["src"]
 filterwarnings = ["error::DeprecationWarning:provenance.*"]
 
 [tool.ruff]

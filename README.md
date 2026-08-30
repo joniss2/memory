@@ -297,7 +297,7 @@ Herkunftsspur, nicht der Debug-Puffer.
 pip install -e ".[dev,mcp]"
 createdb provenance_test
 python -m pytest          # 90 Tests gegen ein echtes Postgres
-ruff check src evals tests
+ruff check src tests
 ```
 
 Die Tests laufen gegen ein echtes Postgres mit `pgvector`. Ein Ersatz wäre

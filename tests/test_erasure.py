@@ -11,7 +11,7 @@ from tests.conftest import at
 
 
 def residue(needle: str, subject: str = "s") -> list[str]:
-    from evals.runner import find_residue
+    from provenance.evals.runner import find_residue
 
     return find_residue(subject, needle)
 

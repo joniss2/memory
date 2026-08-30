@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from evals.metrics import Kind, Outcome
-from evals.runner import DEFAULT_THRESHOLDS, load_scenarios, run_suite
+from provenance.evals.metrics import Kind, Outcome
+from provenance.evals.runner import DEFAULT_THRESHOLDS, load_scenarios, run_suite
 
 
 def test_twenty_scenarios_across_five_patterns():

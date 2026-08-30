@@ -6,8 +6,8 @@ import math
 
 import pytest
 
-from evals.metrics import Kind, Metrics, Outcome, Probe, matches
 from provenance.embeddings.hashing import HashingEmbedder
+from provenance.evals.metrics import Kind, Metrics, Outcome, Probe, matches
 from provenance.llm.base import LLMError, parse_json_object
 from provenance.prompts import PROMPTS_DIR, load_prompt, prompt_refs
 

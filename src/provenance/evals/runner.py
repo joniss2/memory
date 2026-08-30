@@ -20,11 +20,11 @@ from typing import Any
 
 import yaml
 
-from evals.metrics import Kind, Metrics, Outcome, Probe, matches
 from provenance.config import Settings, get_settings
 from provenance.db.migration import migrate
 from provenance.db.pool import connection, transaction
 from provenance.erasure import execute as execute_erasure
+from provenance.evals.metrics import Kind, Metrics, Outcome, Probe, matches
 from provenance.prompts import prompt_refs
 from provenance.replay import purge_subject
 from provenance.service import MemoryService
