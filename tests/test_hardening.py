@@ -195,3 +195,63 @@ def test_export_history_stays_within_the_delivered_facts(ingest, conn):
     # Der Verlauf eines abgelösten Fakts bleibt am ausgelieferten Nachfolger
     # sichtbar -- die parent_id-Bedingung darf nicht wegfallen.
     assert any(item["verlauf"] for item in bericht["aussagen"])
+
+
+# ------------------------------------------------- Eval: Status vs. Einzelprobe
+
+
+def test_report_status_follows_thresholds_and_says_so(monkeypatch):
+    """Der Ausgangsstatus hängt an den Schwellen, nicht an der Einzelprobe --
+    und der Bericht muss das aussprechen, sonst steht eine rote Tabelle über
+    einem Befehl, der mit 0 endet."""
+    from provenance.evals.metrics import Kind, Metrics, Outcome, Probe
+    from provenance.evals.runner import Report, ScenarioResult
+
+    fehlprobe = Probe(
+        kind=Kind.UPDATE_RECALL,
+        scenario="x",
+        checkpoint="c",
+        needle="n",
+        outcome=Outcome.FAIL,
+    )
+    gute = [
+        Probe(kind=Kind.UPDATE_RECALL, scenario="x", checkpoint="c", needle="n",
+              outcome=Outcome.PASS)
+        for _ in range(29)
+    ]
+    metrics = Metrics()
+    for probe in [fehlprobe, *gute]:
+        metrics.add(probe)
+
+    szenario = ScenarioResult(id="x", title="x", pattern="p", subject="s")
+    szenario.probes = [fehlprobe, *gute]
+    report = Report(scenarios=[szenario], metrics=metrics, environment={})
+
+    # 1/30 = 0,967 -- über der Schwelle 0,900, also besteht der Lauf ...
+    assert report.failed is False
+    # ... aber die Probe ist gescheitert, und beides steht im Bericht.
+    assert szenario.failed is True
+    assert report.failed_probes == 1
+    payload = report.as_dict()
+    assert payload["gescheitert"] is False
+    assert payload["gescheiterte_proben"] == 1
+
+
+def test_report_fails_when_a_threshold_is_missed():
+    """Und umgekehrt: reicht die Toleranz nicht, kippt der Lauf."""
+    from provenance.evals.metrics import Kind, Metrics, Outcome, Probe
+    from provenance.evals.runner import Report, ScenarioResult
+
+    proben = [
+        Probe(kind=Kind.ERASURE, scenario="x", checkpoint="c", needle="n", outcome=Outcome.FAIL)
+    ]
+    metrics = Metrics()
+    for probe in proben:
+        metrics.add(probe)
+    szenario = ScenarioResult(id="x", title="x", pattern="p", subject="s")
+    szenario.probes = proben
+    report = Report(scenarios=[szenario], metrics=metrics, environment={})
+
+    # Erasure Completeness duldet nichts: jede gescheiterte Probe bricht sie.
+    assert report.failed is True
+    assert "erasure_completeness" in " ".join(report.threshold_breaches())

@@ -81,9 +81,28 @@ class Report:
 
     @property
     def failed(self) -> bool:
+        """Der Ausgangsstatus des Laufs -- Schwellen, nicht Einzelproben.
+
+        Jede gescheiterte Probe bewegt genau eine Kennzahl: die vier
+        Probenarten decken die vier Kennzahlen ab, eins zu eins. Die Schwellen
+        sind damit ein vollständiges Tor, und die Toleranz darin ist Absicht --
+        `Stale Rate <= 0,100` heißt, dass eine einzelne Abweichung den Lauf
+        nicht kippt. Würde stattdessen jede Probe zählen, wären alle Toleranzen
+        faktisch null und die Schwellen wirkungslos.
+
+        Damit die Toleranz niemanden überrascht, nennt ``render`` sie
+        ausdrücklich, wenn Proben gescheitert sind und der Lauf trotzdem
+        besteht; ``ScenarioResult.failed`` bezieht sich dagegen auf die
+        einzelne Probe, nicht auf den Lauf.
+        """
         return bool(self.threshold_breaches()) or any(
             scenario.error is not None for scenario in self.scenarios
         )
+
+    @property
+    def failed_probes(self) -> int:
+        """Gescheiterte Einzelproben, unabhängig von den Schwellen."""
+        return sum(1 for scenario in self.scenarios for probe in scenario.probes if probe.failed)
 
     def threshold_breaches(self) -> list[str]:
         summary = self.metrics.summary()
@@ -103,6 +122,11 @@ class Report:
             "kennzahlen": self.metrics.summary(),
             "schwellen": self.thresholds,
             "verfehlt": self.threshold_breaches(),
+            # Ausdrücklich beides: "gescheitert" ist der Ausgangsstatus des
+            # Befehls, "gescheiterte_proben" die Rohzahl. Sie können
+            # auseinanderfallen -- das ist die Toleranz in den Schwellen.
+            "gescheitert": self.failed,
+            "gescheiterte_proben": self.failed_probes,
             "szenarien": [scenario.as_dict() for scenario in self.scenarios],
         }
 
@@ -207,6 +231,20 @@ class Report:
                     probe.scenario, probe.checkpoint, probe.kind.value, probe.needle, probe.detail
                 )
             console.print(detail)
+
+        # Der Ausgangsstatus darf nicht überraschen: ohne diese Zeile stünde
+        # oben eine rote Tabelle und der Befehl endete mit 0.
+        breach_list = self.threshold_breaches()
+        if breach_list:
+            console.print("[red]Schwelle verfehlt:[/] " + " · ".join(breach_list))
+        elif self.failed_probes:
+            console.print(
+                f"[yellow]{self.failed_probes} Probe(n) gescheitert, alle Schwellen dennoch "
+                "eingehalten -- der Lauf gilt als bestanden.[/] Die Toleranz steckt in den "
+                "Schwellen; wer sie nicht will, setzt die betroffene auf 0."
+            )
+        if any(scenario.error for scenario in self.scenarios):
+            console.print("[red]Mindestens ein Szenario ist mit einem Fehler abgebrochen.[/]")
 
         console.print(
             f"[dim]Modell: {self.environment['llm_provider']} · "
