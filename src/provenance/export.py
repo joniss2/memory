@@ -34,8 +34,13 @@ def subject_export(
     conn: psycopg.Connection, *, subject_id: str, include_history: bool = True
 ) -> dict[str, Any]:
     """Vollständige Auskunft über eine betroffene Person."""
-    facts = all_facts(conn, subject_id=subject_id, limit=10_000)
-    turns = list_turns(conn, subject_id=subject_id, limit=10_000)
+    # Obergrenze, damit eine Auskunft nicht unbegrenzt Speicher zieht. Wird
+    # sie erreicht, muss das im Bericht stehen -- sonst behauptet der Hinweis
+    # unten Vollständigkeit, die nicht gegeben ist.
+    limit = 10_000
+    facts = all_facts(conn, subject_id=subject_id, limit=limit)
+    turns = list_turns(conn, subject_id=subject_id, limit=limit)
+    truncated = len(facts) >= limit or len(turns) >= limit
     turn_index = {int(turn["id"]): turn for turn in turns}
 
     history = _history(conn, subject_id) if include_history else {}
@@ -67,10 +72,17 @@ def subject_export(
     return {
         "betroffene_person": subject_id,
         "erstellt_am": datetime.now().astimezone().isoformat(),
+        "vollstaendig": not truncated,
         "hinweis": (
             "Diese Auskunft enthält alle gespeicherten Aussagen über die genannte Person, "
             "ihre Quelle und ihren Verlauf. Abgelöste und zurückgezogene Aussagen sind "
             "als solche gekennzeichnet und werden nicht mehr ausgeliefert."
+        )
+        if not truncated
+        else (
+            f"Diese Auskunft ist bei {limit} Einträgen abgeschnitten und damit "
+            "unvollständig. Für eine vollständige Auskunft muss sie seitenweise "
+            "abgerufen werden."
         ),
         "aussagen": exported,
         "gespraechsbeitraege": [

@@ -22,6 +22,12 @@ services:
       PROVENANCE_DATABASE_URL: postgresql://provenance:provenance@db:5432/provenance
       PROVENANCE_LLM_PROVIDER: ${PROVENANCE_LLM_PROVIDER:-heuristic}
       PROVENANCE_LLM_BASE_URL: ${PROVENANCE_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      PROVENANCE_API_TOKEN: ${PROVENANCE_API_TOKEN:-}
+      PROVENANCE_ALLOW_UNAUTHENTICATED: ${PROVENANCE_ALLOW_UNAUTHENTICATED:-false}
+    extra_hosts:
+      # Unter nativem Linux gibt es host.docker.internal sonst nicht, und der
+      # lokale Modellpfad scheitert schon an der Namensauflösung.
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:8080"
     depends_on:

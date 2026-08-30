@@ -78,13 +78,67 @@ class Settings(BaseSettings):
     trace_retention_days: int = 30
 
     # -- Server ------------------------------------------------------------
-    host: str = "0.0.0.0"
+    # Loopback als Vorgabe: ein Gedächtnis-Layer hält personenbezogene Daten
+    # und kann sie auf Zuruf löschen. Wer ihn ins Netz stellt, soll das
+    # entscheiden, nicht erben. Das Container-Image setzt 0.0.0.0 ausdrücklich.
+    host: str = "127.0.0.1"
     port: int = 8080
     dashboard_enabled: bool = True
 
     api_token: str = Field(
         default="",
         description="Wenn gesetzt, verlangt die HTTP-API Bearer-Authentisierung.",
+    )
+    allow_unauthenticated: bool = Field(
+        default=False,
+        description="Erlaubt den Start ohne Token auch dann, wenn die API über "
+        "Loopback hinaus lauscht. Nur für Wegwerf-Umgebungen.",
+    )
+
+    # -- Modellanbindung: Transportsicherheit ------------------------------
+    llm_allow_insecure_http: bool = Field(
+        default=False,
+        description="Erlaubt http:// zu einem Modell außerhalb von Loopback. "
+        "Ohne dies wird ein solcher Endpunkt abgelehnt, weil Prompt-Inhalte "
+        "und API-Schlüssel sonst im Klartext übertragen werden.",
+    )
+
+
+LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+def is_loopback(host: str) -> bool:
+    """Lauscht bzw. verbindet sich das hier nur auf dem eigenen Rechner?
+
+    ``0.0.0.0`` und ``::`` gelten ausdrücklich *nicht* als Loopback: sie
+    binden auf allen Schnittstellen.
+    """
+    candidate = (host or "").strip().strip("[]").lower()
+    if candidate.startswith("127."):
+        return True
+    return candidate in LOOPBACK_HOSTS
+
+
+class InsecureExposure(RuntimeError):
+    """Die Konfiguration stellt personenbezogene Daten ungeschützt ins Netz."""
+
+
+def check_exposure(settings: Settings) -> None:
+    """Verweigert den Start einer offenen API jenseits von Loopback.
+
+    Die API liest, exportiert und löscht personenbezogene Daten. Ohne Token
+    darf sie deshalb nur lokal lauschen. Wer es anders braucht, sagt es
+    ausdrücklich über PROVENANCE_ALLOW_UNAUTHENTICATED.
+    """
+    if settings.api_token or settings.allow_unauthenticated:
+        return
+    if is_loopback(settings.host):
+        return
+    raise InsecureExposure(
+        f"Die API würde auf {settings.host} ohne Token lauschen und damit Auskunft, "
+        "Abruf und Löschung ungeschützt anbieten. Setze PROVENANCE_API_TOKEN, "
+        "binde an 127.0.0.1, oder erlaube es ausdrücklich mit "
+        "PROVENANCE_ALLOW_UNAUTHENTICATED=true."
     )
 
 

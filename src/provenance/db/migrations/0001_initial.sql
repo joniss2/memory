@@ -6,6 +6,9 @@
 --
 -- ${EMBEDDING_DIM} wird vom Migrationsrunner ersetzt (Vorgabe 1024).
 
+-- Verlangt pgvector >= 0.5.0: davor gibt es keinen HNSW-Index. Das Image
+-- pgvector/pgvector:pg16 erfüllt das; ein selbst gebautes Postgres nicht
+-- zwangsläufig.
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- ---------------------------------------------------------------- 4.1 Rohmaterial

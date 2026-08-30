@@ -49,14 +49,26 @@ class OpenAICompatEmbedder:
         if not texts:
             return []
         body = {"model": self.model, "input": list(texts), "dimensions": self.dim}
-        last_error: Exception | None = None
-        for attempt in range(self.max_retries + 1):
+        last_error: Exception | str | None = None
+        dimensions_dropped = False
+        attempt = 0
+        data = None
+        while attempt <= self.max_retries:
             try:
                 response = self._http().post(f"{self.base_url}/embeddings", json=body)
-                if response.status_code == 400 and "dimensions" in response.text:
+                if (
+                    response.status_code == 400
+                    and "dimensions" in body
+                    and "dimensions" in response.text
+                    and not dimensions_dropped
+                ):
                     # Nicht jeder Anbieter kennt den Parameter; ohne ihn muss
                     # das Modell von sich aus die konfigurierte Weite liefern.
+                    # Das kostet bewusst keinen Versuch: sonst scheiterte der
+                    # Rückfall genau dann, wenn er im letzten Anlauf nötig wird.
+                    last_error = response.text[:200]
                     body.pop("dimensions", None)
+                    dimensions_dropped = True
                     continue
                 response.raise_for_status()
                 data = response.json()
@@ -66,7 +78,8 @@ class OpenAICompatEmbedder:
                 if attempt >= self.max_retries:
                     raise EmbeddingError(f"Einbettung fehlgeschlagen: {exc}") from exc
                 time.sleep(min(2.0**attempt, 8.0))
-        else:  # pragma: no cover
+            attempt += 1
+        if data is None:
             raise EmbeddingError(f"Einbettung fehlgeschlagen: {last_error}")
 
         try:

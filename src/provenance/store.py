@@ -26,6 +26,16 @@ FACT_COLUMNS = """
 _WORD = re.compile(r"[\wäöüßÄÖÜ]{2,}", re.UNICODE)
 
 
+def _like_literal(value: str) -> str:
+    """Maskiert LIKE-Metazeichen, damit ein Term wörtlich gesucht wird.
+
+    Ohne ESCAPE-Klausel: der Backslash ist in Postgres bereits das
+    voreingestellte Fluchtzeichen, und ``ILIKE ANY(...) ESCAPE ...`` ist
+    syntaktisch gar nicht erlaubt.
+    """
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 @dataclass(frozen=True)
 class AsOf:
     """Zwei Zeitachsen, zwei Fragen.
@@ -335,7 +345,9 @@ def neighbours_for_candidate(
         params["predicates"] = list(predicates)
         filters.append("(f.triple->>'predicate') = ANY(%(predicates)s)")
     if terms:
-        params["terms"] = [f"%{term}%" for term in terms]
+        # %, _ und \\ sind in ILIKE Platzhalter. Ein Term wie „100%" würde die
+        # Ankersuche sonst auf beliebige Fakten ausweiten.
+        params["terms"] = [f"%{_like_literal(term)}%" for term in terms]
         filters.append("f.content ILIKE ANY(%(terms)s)")
 
     base = f"""

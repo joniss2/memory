@@ -8,8 +8,10 @@ einen Threadpool -- das ist ehrlicher als ein `async def`, das doch blockiert.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import datetime
+from secrets import compare_digest
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
@@ -17,7 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from provenance import __version__, erasure
-from provenance.config import Settings, get_settings
+from provenance.config import Settings, check_exposure, get_settings
 from provenance.db.migration import migrate
 from provenance.db.pool import connection, transaction
 from provenance.export import fact_history, subject_export
@@ -94,21 +96,27 @@ class EraseIn(BaseModel):
 # --------------------------------------------------------------------- App
 
 
-def require_token(
-    authorization: Annotated[str | None, Header()] = None,
-    settings: Settings = Depends(get_settings),
-) -> None:
-    """Bearer-Prüfung, sofern PROVENANCE_API_TOKEN gesetzt ist.
+def make_token_guard(settings: Settings) -> Callable[[str | None], None]:
+    """Baut die Bearer-Prüfung für *diese* Konfiguration.
 
-    Ohne gesetztes Token bleibt die Schnittstelle offen -- das ist für einen
-    lokalen Betrieb hinter einem Reverse Proxy gewollt und für alles andere
-    eine bewusste Entscheidung des Betreibers.
+    Bewusst an die an ``create_app`` übergebenen Settings gebunden statt an
+    ``get_settings()``: sonst liefe ein programmatisch gesetztes Token ins
+    Leere, weil die Abhängigkeit den zwischengespeicherten Prozesszustand
+    liest. Ohne gesetztes Token bleibt die Schnittstelle offen -- dann hat
+    ``check_exposure`` bereits sichergestellt, dass sie nur lokal lauscht.
     """
     expected = settings.api_token
-    if not expected:
-        return
-    if authorization != f"Bearer {expected}":
-        raise HTTPException(status_code=401, detail="ungültiges oder fehlendes Token")
+
+    def require_token(authorization: Annotated[str | None, Header()] = None) -> None:
+        if not expected:
+            return
+        # Konstante Laufzeit: ein Vergleich mit `!=` verrät über die Dauer,
+        # wie viele Zeichen stimmen.
+        presented = authorization or ""
+        if not compare_digest(presented, f"Bearer {expected}"):
+            raise HTTPException(status_code=401, detail="ungültiges oder fehlendes Token")
+
+    return require_token
 
 
 @asynccontextmanager
@@ -125,7 +133,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         summary="Gedächtnis-Layer mit Herkunftsspur",
         lifespan=lifespan,
     )
-    guard = [Depends(require_token)]
+    check_exposure(settings)
+    guard = [Depends(make_token_guard(settings))]
 
     # ----------------------------------------------------------- Betriebsdaten
 

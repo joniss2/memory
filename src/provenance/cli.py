@@ -19,7 +19,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from provenance import __version__, erasure
-from provenance.config import get_settings
+from provenance.config import InsecureExposure, check_exposure, get_settings
 from provenance.db.migration import migrate as run_migrate
 from provenance.db.migration import reset as run_reset
 from provenance.db.pool import connection, transaction
@@ -389,6 +389,14 @@ def serve(
     import uvicorn
 
     settings = get_settings()
+    resolved = settings.model_copy(
+        update={"host": host or settings.host, "port": port or settings.port}
+    )
+    try:
+        check_exposure(resolved)
+    except InsecureExposure as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(code=2) from exc
     uvicorn.run(
         "provenance.api:app",
         host=host or settings.host,

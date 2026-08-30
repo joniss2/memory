@@ -11,6 +11,6 @@ turns:
     text: I moved to Rotterdam.
 checkpoints:
   - after: 2
-    query: Where does he live? Wo wohnt er?
+    query: Where does he live?
     expect_present: [Rotterdam]
     expect_absent: [Hamburg]

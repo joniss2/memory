@@ -15,14 +15,21 @@ from provenance.prompts import PROMPTS_DIR, load_prompt, prompt_refs
 def test_prompt_ref_follows_the_content(tmp_path, monkeypatch):
     """Jede Bearbeitung der Vorlage ändert die Kennung -- auch die ohne
     hochgezählte Versionsnummer."""
+    import provenance.prompts as prompts
+
     original = (PROMPTS_DIR / "extract.v1.md").read_text("utf-8")
     first = load_prompt("extract.v1").ref
+
+    # Auf eine Kopie ausweichen: die installierte Vorlage zu beschreiben
+    # scheitert bei einer schreibgeschützten Installation und wirkt sonst in
+    # parallele Läufe hinein.
+    (tmp_path / "extract.v1.md").write_text(original + "\nein Wort mehr\n", "utf-8")
+    monkeypatch.setattr(prompts, "PROMPTS_DIR", tmp_path)
+    load_prompt.cache_clear()
     try:
-        (PROMPTS_DIR / "extract.v1.md").write_text(original + "\nein Wort mehr\n", "utf-8")
-        load_prompt.cache_clear()
         assert load_prompt("extract.v1").ref != first
     finally:
-        (PROMPTS_DIR / "extract.v1.md").write_text(original, "utf-8")
+        monkeypatch.undo()
         load_prompt.cache_clear()
     assert load_prompt("extract.v1").ref == first
 

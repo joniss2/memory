@@ -43,6 +43,7 @@ def build_llm(settings: Settings | None = None) -> LLMProvider:
             api_key=settings.llm_api_key,
             timeout_s=settings.llm_timeout_s,
             max_retries=settings.llm_max_retries,
+            allow_insecure_http=settings.llm_allow_insecure_http,
         )
     if provider == "scripted":
         return ScriptedProvider()

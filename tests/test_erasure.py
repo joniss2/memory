@@ -132,6 +132,50 @@ def test_entity_survives_while_another_fact_supports_it(ingest):
     assert "Köln" not in names
 
 
+def test_rationale_and_query_do_not_survive_erasure(service, ingest):
+    """Regression: die Löschung ließ zwei Klartextfelder stehen.
+
+    ``lineage.rationale`` zitiert den Wert, über den entschieden wurde, und
+    ``traces.query`` den Wortlaut der Abfrage. Beide überlebten die Löschung,
+    und die Kennzahl Erasure Completeness konnte es nicht sehen, weil ihre
+    Restsuche diese Spalten nicht kannte.
+    """
+    ingest("Ich mag Espresso.", at(1))
+    ingest("Ich mag keinen Espresso.", at(6))
+    service.recall(subject_id="s", query="Was trinkt er? Espresso?")
+
+    with connection() as conn:
+        rationales = [
+            row["rationale"]
+            for row in conn.execute("SELECT rationale FROM lineage").fetchall()
+        ]
+        queries = [
+            row["query"]
+            for row in conn.execute("SELECT query FROM traces WHERE query IS NOT NULL").fetchall()
+        ]
+    # Ohne diese Vorbedingung prüfte der Test nichts.
+    assert any("Espresso" in (text or "") for text in rationales), "keine Begründung mit dem Wert"
+    assert any("Espresso" in (text or "") for text in queries), "keine Abfrage mit dem Wert"
+
+    with connection() as conn:
+        plan = erasure.preview(conn, subject_id="s")
+        assert plan.lineage_ids and plan.trace_ids
+        erasure.execute(conn, subject_id="s", reason="Regression")
+        conn.commit()
+
+    assert residue("Espresso") == []
+
+    with connection() as conn:
+        rows = conn.execute("SELECT op, parent_id, rationale FROM lineage ORDER BY id").fetchall()
+        traces = conn.execute("SELECT kind, query, duration_ms FROM traces ORDER BY id").fetchall()
+    # Die Struktur bleibt: der Abstammungsgraph ist die Herkunftsspur.
+    assert [row["op"] for row in rows] == ["add", "update"]
+    assert rows[1]["parent_id"] == 1
+    assert all(row["rationale"] is None for row in rows)
+    assert all(row["query"] is None for row in traces)
+    assert all(row["duration_ms"] is not None for row in traces)
+
+
 def test_receipt_records_what_went(ingest):
     ingest("Ich wohne in Köln.", at(1))
     with connection() as conn:

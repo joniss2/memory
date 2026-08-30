@@ -5,6 +5,10 @@ on:
     branches: ["**"]
   pull_request:
 
+# Der Lauf braucht nur Lesezugriff auf den Baum.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -28,6 +32,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Der pull_request-Job führt Code aus dem PR aus; ein im Arbeitsbaum
+          # hinterlegtes Token hätte dort nichts zu suchen.
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

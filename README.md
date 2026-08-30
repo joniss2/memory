@@ -36,13 +36,24 @@ vor der Optimierung des Retrievals.
 
 ```bash
 docker build -t provenance .
-docker run --rm -p 8080:8080 -v provenance-data:/var/lib/postgresql/data provenance
+
+export PROVENANCE_API_TOKEN=$(openssl rand -hex 24)
+docker run --rm -p 8080:8080 -e PROVENANCE_API_TOKEN \
+  -v provenance-data:/var/lib/postgresql/data provenance
+echo "Token: $PROVENANCE_API_TOKEN"
 ```
 
 Danach: <http://localhost:8080/ui/> für die Entwickleransicht,
-<http://localhost:8080/docs> für die API.
+<http://localhost:8080/docs> für die API. Das Token trägt man im Dashboard
+oben rechts einmal ein.
 
-Ohne Konfiguration läuft alles ohne Netz -- mit dem deterministischen
+**Der Dienst verweigert den Start, wenn er über Loopback hinaus lauscht und
+kein Token gesetzt ist.** Er bietet Abruf, Auskunft und Löschung
+personenbezogener Daten an; das ungeschützt ins Netz zu stellen soll eine
+Entscheidung sein, keine Vorgabe. Für eine Wegwerf-Umgebung genügt
+`-e PROVENANCE_ALLOW_UNAUTHENTICATED=true`.
+
+Ohne weitere Konfiguration läuft alles ohne Netz -- mit dem deterministischen
 Modellersatz und gehashten Einbettungen. Das ist zum Ausprobieren gedacht,
 nicht zum Betrieb; siehe [Modellanbindung](#modellanbindung).
 
@@ -142,16 +153,27 @@ Ausgeführt wird dann:
 3. `trace_steps.input`/`output` **schemakonform geschwärzt** -- Schlüssel,
    Verschachtelung, Zeitstempel und Dauer bleiben, alle Blätter werden `null`
 4. `turns.content` geleert, `redacted_at` gesetzt
-5. Graphknoten, die kein nicht gelöschter Fakt mehr belegt, verlieren ihren Namen
-6. Löschbeleg geschrieben
+5. `lineage.rationale` geleert -- eine Begründung wie „Aussage kehrt die
+   Polarität zu ‚Espresso' um" zitiert den Wert, der verschwinden soll. Die
+   Zeile mit `op` und `parent_id` bleibt: sie ist die Herkunftsspur.
+6. `traces.query` geleert -- der Wortlaut einer Abfrage nennt oft genau den
+   gesuchten Namen
+7. Graphknoten, die kein nicht gelöschter Fakt mehr belegt, verlieren ihren Namen
+8. Löschbeleg geschrieben
 
 Die leere Zeile bleibt bewusst stehen: sie belegt, dass gelöscht wurde. Ein
 spurloses `DELETE` kann man einer Aufsichtsbehörde nicht vorzeigen.
 
-Nach der Löschung ist der Wert in **keiner** Tabelle mehr auffindbar --
-Fakten, Rohbeiträge, Graphknoten und Traces eingeschlossen. Genau das prüft
-die Kennzahl `Erasure Completeness`, und zwar durch eine Volltextsuche über
-alle vier Ablagen.
+Nach der Löschung ist der Wert in **keiner** Tabelle mehr auffindbar. Genau
+das prüft die Kennzahl `Erasure Completeness`, durch eine Volltextsuche über
+alle sechs Ablagen, in denen ein Wert im Klartext stehen kann:
+`facts.content`, `turns.content`, `entities.name`, `lineage.rationale`,
+`traces.query` und `trace_steps`.
+
+Die Liste in `RESIDUE_CHECKS` ist der eigentliche Inhalt dieser Zusage: was
+dort fehlt, kann die Kennzahl nicht sehen. Die letzten drei Einträge kamen
+erst nach einem Review dazu -- bis dahin meldete die Kennzahl 1,000, während
+Begründung und Abfrage den gelöschten Wert noch trugen.
 
 ---
 

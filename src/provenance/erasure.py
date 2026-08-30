@@ -8,6 +8,10 @@ Der Ablauf aus Abschnitt 7, mit zwei Ergänzungen, die der Entwurf offenlässt:
 * **Knoten.** Kanten werden geschlossen, aber ``entities.name`` trägt selbst
   Personenbezug ("ACME", "Köln"). Ein Knoten bleibt genau so lange
   inhaltlich stehen, wie ihn noch ein nicht gelöschter Fakt belegt.
+* **Begründungen und Fragen.** ``lineage.rationale`` zitiert die Werte, über
+  die entschieden wurde, und ``traces.query`` den Wortlaut einer Abfrage.
+  Beide Felder nennt Abschnitt 7 nicht, und beide überlebten die Löschung,
+  bis sie hier aufgenommen wurden -- die Zeile bleibt, der Freitext geht.
 
 Was in allen Fällen bleibt: die Zeile. Ein spurloses ``DELETE`` kann man
 einer Aufsichtsbehörde nicht vorzeigen.
@@ -41,6 +45,11 @@ class ErasurePreview:
     trace_step_ids: list[int] = field(default_factory=list)
     turn_ids: list[int] = field(default_factory=list)
     entity_ids: list[int] = field(default_factory=list)
+    # lineage.rationale zitiert die Werte, über die entschieden wurde, und
+    # traces.query den Wortlaut einer Frage. Beides ist personenbezogen und
+    # überlebte die Löschung, bis es hier aufgenommen wurde.
+    lineage_ids: list[int] = field(default_factory=list)
+    trace_ids: list[int] = field(default_factory=list)
 
     @property
     def fact_ids(self) -> list[int]:
@@ -60,11 +69,15 @@ class ErasurePreview:
                 "trace_steps": len(self.trace_step_ids),
                 "turns": len(self.turn_ids),
                 "entities": len(self.entity_ids),
+                "lineage_rationales": len(self.lineage_ids),
+                "trace_queries": len(self.trace_ids),
             },
             "edge_ids": self.edge_ids,
             "trace_step_ids": self.trace_step_ids,
             "turn_ids": self.turn_ids,
             "entity_ids": self.entity_ids,
+            "lineage_ids": self.lineage_ids,
+            "trace_ids": self.trace_ids,
         }
 
 
@@ -131,6 +144,8 @@ def preview(
     trace_step_ids = _trace_step_ids(conn, subject_id=subject_id, fact_ids=surviving, scope=scope)
     turn_ids = _turn_ids(conn, subject_id=subject_id, fact_ids=surviving, scope=scope)
     entity_ids = _orphaned_entities(conn, subject_id=subject_id, fact_ids=surviving)
+    lineage_ids = _lineage_ids(conn, surviving)
+    trace_ids = _trace_ids(conn, subject_id=subject_id, step_ids=trace_step_ids, scope=scope)
 
     return ErasurePreview(
         subject_id=subject_id,
@@ -142,6 +157,8 @@ def preview(
         trace_step_ids=trace_step_ids,
         turn_ids=turn_ids,
         entity_ids=entity_ids,
+        lineage_ids=lineage_ids,
+        trace_ids=trace_ids,
     )
 
 
@@ -234,6 +251,55 @@ def _turn_ids(
     return [int(row["id"]) for row in rows]
 
 
+def _lineage_ids(conn: psycopg.Connection, fact_ids: Sequence[int]) -> list[int]:
+    """Abstammungszeilen, deren Begründung den gelöschten Wert nennen kann.
+
+    Eine Begründung wie „Aussage kehrt die Polarität zu ‚Espresso' um" zitiert
+    genau den Wert, der verschwinden soll. Die Zeile bleibt -- sie ist die
+    Herkunftsspur --, der Freitext geht.
+    """
+    if not fact_ids:
+        return []
+    ids = list(fact_ids)
+    rows = conn.execute(
+        """
+        SELECT id FROM lineage
+        WHERE (fact_id = ANY(%(ids)s) OR parent_id = ANY(%(ids)s)) AND rationale IS NOT NULL
+        ORDER BY id
+        """,
+        {"ids": ids},
+    ).fetchall()
+    return [int(row["id"]) for row in rows]
+
+
+def _trace_ids(
+    conn: psycopg.Connection, *, subject_id: str, step_ids: Sequence[int], scope: str
+) -> list[int]:
+    """Traces, deren Frage im Klartext gespeichert ist.
+
+    ``traces.query`` ist der Wortlaut einer Abfrage und kann den gesuchten
+    Namen oder Wert enthalten.
+    """
+    if scope == "subject":
+        rows = conn.execute(
+            "SELECT id FROM traces WHERE subject_id = %s AND query IS NOT NULL ORDER BY id",
+            (subject_id,),
+        ).fetchall()
+        return [int(row["id"]) for row in rows]
+    if not step_ids:
+        return []
+    rows = conn.execute(
+        """
+        SELECT DISTINCT t.id FROM traces t
+        JOIN trace_steps ts ON ts.trace_id = t.id
+        WHERE ts.id = ANY(%s) AND t.query IS NOT NULL
+        ORDER BY t.id
+        """,
+        (list(step_ids),),
+    ).fetchall()
+    return [int(row["id"]) for row in rows]
+
+
 def _orphaned_entities(
     conn: psycopg.Connection, *, subject_id: str, fact_ids: Sequence[int]
 ) -> list[int]:
@@ -310,6 +376,14 @@ def execute(
             (at, plan.turn_ids),
         )
 
+    if plan.lineage_ids:
+        conn.execute(
+            "UPDATE lineage SET rationale = NULL WHERE id = ANY(%s)", (plan.lineage_ids,)
+        )
+
+    if plan.trace_ids:
+        conn.execute("UPDATE traces SET query = NULL WHERE id = ANY(%s)", (plan.trace_ids,))
+
     if plan.entity_ids:
         conn.execute(
             """
@@ -341,6 +415,8 @@ def execute(
                     "trace_steps": redacted_steps,
                     "turns": plan.turn_ids,
                     "entities": plan.entity_ids,
+                    "lineage": plan.lineage_ids,
+                    "traces": plan.trace_ids,
                 }
             ),
             at,

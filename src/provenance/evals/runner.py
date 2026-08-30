@@ -254,7 +254,16 @@ def run_suite(
     metrics = Metrics()
     results: list[ScenarioResult] = []
 
-    for scenario in load_scenarios(scenarios_dir, only):
+    scenarios = load_scenarios(scenarios_dir, only)
+    if not scenarios:
+        # Sonst meldete die Suite „keine Probe gescheitert" und der Befehl
+        # endete mit 0, ohne je etwas geprüft zu haben.
+        raise ValueError(
+            f"Kein Szenario ausgewählt (Filter {only!r})."
+            if only
+            else "Keine Szenarien gefunden."
+        )
+    for scenario in scenarios:
         result = run_scenario(scenario, service=service, metrics=metrics, keep=keep)
         results.append(result)
 
@@ -528,27 +537,53 @@ def _run_erasure(
         )
 
 
+def like_literal(needle: str) -> str:
+    """Maskiert LIKE-Metazeichen, damit eine Probe wörtlich gesucht wird.
+
+    ``%`` und ``_`` sind in ``ILIKE`` Platzhalter. Eine Probe auf „100%" würde
+    sonst auf beliebigen Text passen und eine Löschung fälschlich als
+    unvollständig melden.
+    """
+    return needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+#: Jede Spalte, in der ein gelöschter Wert im Klartext stehen könnte. Die
+#: Liste ist der eigentliche Inhalt der Zusage „Erasure Completeness" -- was
+#: hier fehlt, kann die Kennzahl nicht sehen.
+RESIDUE_CHECKS: tuple[tuple[str, str], ...] = (
+    ("facts.content", "SELECT count(*) AS n FROM facts WHERE subject_id = %(s)s AND content ILIKE %(p)s"),
+    ("turns.content", "SELECT count(*) AS n FROM turns WHERE subject_id = %(s)s AND content ILIKE %(p)s"),
+    ("entities.name", "SELECT count(*) AS n FROM entities WHERE subject_id = %(s)s AND name ILIKE %(p)s"),
+    (
+        "lineage.rationale",
+        "SELECT count(*) AS n FROM lineage l JOIN facts f ON f.id = l.fact_id "
+        "WHERE f.subject_id = %(s)s AND l.rationale ILIKE %(p)s",
+    ),
+    (
+        "traces.query",
+        "SELECT count(*) AS n FROM traces WHERE subject_id = %(s)s AND query ILIKE %(p)s",
+    ),
+    (
+        "trace_steps",
+        "SELECT count(*) AS n FROM trace_steps ts JOIN traces t ON t.id = ts.trace_id "
+        "WHERE t.subject_id = %(s)s AND (ts.input::text ILIKE %(p)s "
+        "OR ts.output::text ILIKE %(p)s)",
+    ),
+)
+
+
 def find_residue(subject: str, needle: str) -> list[str]:
     """Sucht einen gelöschten Wert überall dort, wo er stehen könnte.
 
-    Fakten, Rohbeiträge, Graphknoten *und* die Traces -- Letztere sind die
-    Stelle, an der Systeme mit getrenntem Auditlog auffliegen.
+    Fakten, Rohbeiträge, Graphknoten, Abstammungsbegründungen, Trace-Fragen
+    *und* die Trace-Schritte. Die letzten drei sind die Stelle, an der
+    Systeme mit getrenntem Auditlog auffliegen -- und waren bis zuletzt auch
+    hier die Lücke.
     """
-    like = f"%{needle}%"
+    params = {"s": subject, "p": f"%{like_literal(needle)}%"}
     found: list[str] = []
     with connection() as conn:
-        checks = (
-            ("facts.content", "SELECT count(*) AS n FROM facts WHERE subject_id = %s AND content ILIKE %s"),
-            ("turns.content", "SELECT count(*) AS n FROM turns WHERE subject_id = %s AND content ILIKE %s"),
-            ("entities.name", "SELECT count(*) AS n FROM entities WHERE subject_id = %s AND name ILIKE %s"),
-            (
-                "trace_steps",
-                "SELECT count(*) AS n FROM trace_steps ts JOIN traces t ON t.id = ts.trace_id "
-                "WHERE t.subject_id = %s AND (ts.input::text ILIKE %s OR ts.output::text ILIKE %s)",
-            ),
-        )
-        for label, sql in checks:
-            params = (subject, like, like) if label == "trace_steps" else (subject, like)
+        for label, sql in RESIDUE_CHECKS:
             row = conn.execute(sql, params).fetchone()
             if row and int(row["n"]) > 0:
                 found.append(f"{label} ({row['n']}×)")

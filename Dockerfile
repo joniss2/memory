@@ -27,6 +27,13 @@ RUN pip install --no-cache-dir ".[mcp]"
 COPY docker/entrypoint.sh /usr/local/bin/provenance-entrypoint
 RUN chmod +x /usr/local/bin/provenance-entrypoint
 
+# Das eingebettete Postgres lauscht nur im Netzwerk-Namensraum des Containers;
+# 5432 wird nicht veröffentlicht. Die Zugangsdaten sind deshalb Vorgaben für
+# genau diese Verbindung -- wer eine externe Datenbank anbindet, setzt
+# PROVENANCE_DATABASE_URL und PROVENANCE_EMBEDDED_POSTGRES=0.
+#
+# PROVENANCE_HOST=0.0.0.0 ist nötig, damit der veröffentlichte Port erreichbar
+# ist. Ohne PROVENANCE_API_TOKEN verweigert der Dienst dann den Start.
 ENV POSTGRES_USER=provenance \
     POSTGRES_PASSWORD=provenance \
     POSTGRES_DB=provenance \

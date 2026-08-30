@@ -28,10 +28,17 @@ class Migration:
     version: str
     path: Path
     sql: str
+    raw: str
 
     @property
     def checksum(self) -> str:
-        return hashlib.sha256(self.sql.encode("utf-8")).hexdigest()[:16]
+        """Hash über die Datei, nicht über das eingesetzte Ergebnis.
+
+        Sonst änderte ein Wechsel von PROVENANCE_EMBEDDING_DIM die Prüfsumme
+        einer längst angewandten Migration -- und der Dienst verweigerte den
+        Start mit der irreführenden Meldung, jemand habe die Datei bearbeitet.
+        """
+        return hashlib.sha256(self.raw.encode("utf-8")).hexdigest()[:16]
 
 
 def _render(raw: str, embedding_dim: int) -> str:
@@ -43,7 +50,8 @@ def load_migrations(embedding_dim: int | None = None) -> list[Migration]:
     out: list[Migration] = []
     for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
         version = path.stem
-        out.append(Migration(version=version, path=path, sql=_render(path.read_text("utf-8"), dim)))
+        raw = path.read_text("utf-8")
+        out.append(Migration(version=version, path=path, sql=_render(raw, dim), raw=raw))
     return out
 
 

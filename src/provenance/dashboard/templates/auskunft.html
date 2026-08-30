@@ -209,7 +209,15 @@ $("export").addEventListener("click", async () => {
 });
 
 $("show-inactive").addEventListener("change", loadFacts);
-$("subject").addEventListener("change", e => { state.subject = e.target.value; state.selected = null; load(); });
+$("subject").addEventListener("change", e => {
+  state.subject = e.target.value;
+  state.selected = null;
+  // Erst leeren, dann laden: sonst steht die Herkunft der vorigen Person
+  // noch da, während die neue geladen wird.
+  $("history").innerHTML = `<p class="empty">Eine Angabe links anklicken.</p>`;
+  $("erase-preview").innerHTML = "";
+  load();
+});
 $("reload").addEventListener("click", load);
 
 async function load() {

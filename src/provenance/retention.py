@@ -20,6 +20,10 @@ def prune_traces(
     conn: psycopg.Connection, *, older_than_days: int, subject_id: str | None = None
 ) -> dict[str, Any]:
     """Reduziert alte Trace-Schritte auf ihre Metadaten."""
+    if older_than_days < 1:
+        # Bei 0 oder negativ läge der Stichtag in der Gegenwart oder Zukunft:
+        # die Abfrage träfe jeden Schritt, und die Schwärzung ist endgültig.
+        raise ValueError("older_than_days muss mindestens 1 sein")
     cutoff = datetime.now(UTC) - timedelta(days=older_than_days)
     params: list[Any] = [cutoff]
     scope = ""

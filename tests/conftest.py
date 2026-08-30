@@ -13,6 +13,8 @@ from datetime import UTC, datetime
 
 import psycopg
 import pytest
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
+from psycopg.sql import SQL, Identifier
 
 DEFAULT_URL = "postgresql://provenance:provenance@localhost:5432/provenance_test"
 TEST_URL = os.environ.get("PROVENANCE_TEST_DATABASE_URL", DEFAULT_URL)
@@ -39,13 +41,21 @@ TABLES = (
 
 
 def _ensure_database() -> None:
-    """Legt die Testdatenbank an, falls sie fehlt."""
-    admin_url = TEST_URL.rsplit("/", 1)[0] + "/postgres"
-    name = TEST_URL.rsplit("/", 1)[1]
+    """Legt die Testdatenbank an, falls sie fehlt.
+
+    Die URL wird über psycopg zerlegt statt am letzten Schrägstrich getrennt:
+    sonst landete ein angehängtes ``?sslmode=...`` im Datenbanknamen, und die
+    Fixture legte eine Datenbank an, die der Pool nie benutzt.
+    """
+    params = conninfo_to_dict(TEST_URL)
+    name = params.get("dbname")
+    if not name:
+        raise RuntimeError(f"keine Datenbank in PROVENANCE_TEST_DATABASE_URL: {TEST_URL!r}")
+    admin_url = make_conninfo(TEST_URL, dbname="postgres")
     with psycopg.connect(admin_url, autocommit=True) as conn:
         exists = conn.execute("SELECT 1 FROM pg_database WHERE datname = %s", (name,)).fetchone()
         if not exists:
-            conn.execute(f'CREATE DATABASE "{name}"')
+            conn.execute(SQL("CREATE DATABASE {}").format(Identifier(name)))
 
 
 @pytest.fixture(scope="session", autouse=True)
