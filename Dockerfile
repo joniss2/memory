@@ -22,7 +22,6 @@ RUN python3 -m venv "$VIRTUAL_ENV"
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
-COPY evals ./evals
 RUN pip install --no-cache-dir ".[mcp]"
 
 COPY docker/entrypoint.sh /usr/local/bin/provenance-entrypoint
