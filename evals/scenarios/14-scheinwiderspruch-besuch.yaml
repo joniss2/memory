@@ -1,0 +1,17 @@
+title: Besuch beim Wettbewerber
+pattern: Scheinwiderspruch
+description: >
+  Ein Besuch ist kein Arbeitsverhältnis. Beide Sätze nennen eine Firma; nur
+  einer sagt etwas über den Arbeitgeber.
+preconditions: [Globex]
+turns:
+  - at: 2025-08-01
+    text: Ich arbeite bei ACME.
+  - at: 2026-06-18
+    text: Ich war gestern bei Globex zu Besuch.
+checkpoints:
+  - after: 2
+    query: Wo arbeitet er?
+    expect_present: [ACME]
+    expect_absent: ["re:arbeitet bei Globex"]
+    must_stay_active: [ACME]

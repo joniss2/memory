@@ -1,0 +1,19 @@
+title: Widerruf ohne Bezug
+pattern: Widerruf
+description: >
+  Ein Widerruf zu einem Thema, zu dem nichts gespeichert ist, darf nichts
+  anfassen. Die Gegenprobe zu Szenario 17: ein System, das auf jeden
+  Widerruf irgendetwas zurückzieht, sieht dort gut aus und ist hier
+  gefährlich.
+turns:
+  - at: 2026-02-14
+    text: Ich wohne in Kiel.
+  - at: 2026-03-01
+    text: Ich mag Kaffee.
+  - at: 2026-08-01
+    text: Vergiss, was ich über mein Auto gesagt habe.
+checkpoints:
+  - after: 3
+    query: Wo wohnt er? Was mag er?
+    expect_present: [Kiel, Kaffee]
+    must_stay_active: [Kiel, Kaffee]

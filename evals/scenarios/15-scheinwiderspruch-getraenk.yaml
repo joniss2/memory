@@ -1,0 +1,15 @@
+title: Mag Kaffee, mag keinen Espresso
+pattern: Scheinwiderspruch
+description: >
+  Zuneigung und Abneigung zu zwei verschiedenen Dingen. Erst wenn sich beide
+  auf dasselbe Objekt beziehen, ist es ein Widerspruch.
+turns:
+  - at: 2026-03-01
+    text: Ich mag Kaffee.
+  - at: 2026-03-20
+    text: Ich mag keinen Espresso.
+checkpoints:
+  - after: 2
+    query: Was trinkt er gern?
+    expect_present: [Kaffee]
+    must_stay_active: [Kaffee, Espresso]

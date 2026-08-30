@@ -1,0 +1,12 @@
+title: Sabbatical neben dem Arbeitsverhältnis
+pattern: Befristung
+turns:
+  - at: 2025-01-09
+    text: Ich arbeite bei Initech.
+  - at: 2026-07-01
+    text: Ich bin momentan im Sabbatical.
+checkpoints:
+  - after: 2
+    query: Wo arbeitet er?
+    expect_present: [Sabbatical]
+    must_stay_active: [Initech]

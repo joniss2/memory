@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # pgvector fertig eingebaut -- dieselbe Erweiterung, die das Schema verlangt.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: provenance
+          POSTGRES_PASSWORD: provenance
+          POSTGRES_DB: provenance_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U provenance"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
+    env:
+      PROVENANCE_TEST_DATABASE_URL: postgresql://provenance:provenance@localhost:5432/provenance_test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -e ".[dev,mcp]"
+
+      - name: Lint
+        run: ruff check src evals tests
+
+      - name: Tests
+        run: python -m pytest -q
+
+      - name: Eval-Suite
+        # Die Eval ist Teil des Produkts, nicht Anhang: sie läuft in CI und
+        # ihre Schwellen lassen den Lauf scheitern.
+        run: provenance eval --out eval-report.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: eval-report.json

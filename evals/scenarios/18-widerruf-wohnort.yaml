@@ -1,0 +1,11 @@
+title: Widerruf der Angaben zum Wohnort
+pattern: Widerruf
+turns:
+  - at: 2026-02-14
+    text: Ich wohne in Kiel.
+  - at: 2026-08-01
+    text: Vergiss bitte, was ich über meinen Wohnort gesagt habe.
+checkpoints:
+  - after: 2
+    query: Wo wohnt er?
+    expect_absent: [Kiel]

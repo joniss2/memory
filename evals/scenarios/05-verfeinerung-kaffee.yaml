@@ -1,0 +1,18 @@
+title: Kaffee wird zu Filterkaffee
+pattern: Verfeinerung
+description: >
+  Das Beispiel aus Abschnitt 9. Eine Verfeinerung ist kein Widerspruch: wer
+  am liebsten Filterkaffee trinkt, mag weiterhin Kaffee. Der allgemeine Fakt
+  darf deshalb nicht abgelöst werden.
+turns:
+  - at: 2026-01-08
+    text: Ich mag Kaffee.
+  - at: 2026-02-11
+    text: Ich trinke am liebsten Filterkaffee.
+  - at: 2026-02-11
+    text: Ich mag keinen Espresso.
+checkpoints:
+  - after: 3
+    query: Was mag er? Was trinkt er gern?
+    expect_present: [Filterkaffee]
+    must_stay_active: [Kaffee]

@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/ui/favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>provenance — Auskunft</title>
+<style>/*SHARED_CSS*/</style>
+</head>
+<body>
+<header>
+  <h1>provenance</h1>
+  <span class="sub">Auskunft und Löschung</span>
+  <div class="row">
+    <select id="subject"></select>
+    <button id="reload">neu laden</button>
+  </div>
+  <nav>
+    <a href="/ui/">Entwicklung</a>
+    <a href="/ui/auskunft" class="active">Auskunft</a>
+    <input id="token" type="password" placeholder="API-Token (falls gesetzt)" size="18">
+  </nav>
+</header>
+
+<main>
+<div class="grid">
+  <div>
+    <section>
+      <h2>Was wissen wir über diese Person?</h2>
+      <div class="body">
+        <div class="row" style="margin-bottom:10px">
+          <button id="export">Auskunft als JSON herunterladen</button>
+          <label class="small muted"><input type="checkbox" id="show-inactive"> auch abgelöste und zurückgezogene Angaben</label>
+        </div>
+        <table><thead><tr><th>Angabe</th><th>gilt seit</th><th>Stand</th></tr></thead>
+        <tbody id="facts"></tbody></table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Löschen</h2>
+      <div class="body">
+        <p class="small muted">Die Vorschau zeigt, was mit weggeht — auch alles, was aus den gewählten Angaben abgeleitet wurde. Gelöscht wird erst nach Bestätigung.</p>
+        <div class="row">
+          <button id="preview-selected">Vorschau für die gewählte Angabe</button>
+          <button id="preview-all" class="danger">Vorschau: gesamte Person</button>
+        </div>
+        <div id="erase-preview"></div>
+      </div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Herkunft dieser Angabe</h2>
+      <div class="body" id="history">
+        <p class="empty">Eine Angabe links anklicken.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Löschbelege</h2>
+      <div class="body" id="receipts"><p class="empty">—</p></div>
+    </section>
+  </div>
+</div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const token = () => localStorage.getItem("provenance_token") || "";
+$("token").value = token();
+$("token").addEventListener("change", e => { localStorage.setItem("provenance_token", e.target.value); load(); });
+
+async function api(path, opts = {}) {
+  const headers = Object.assign({"Content-Type": "application/json"}, opts.headers || {});
+  if (token()) headers["Authorization"] = "Bearer " + token();
+  const res = await fetch(path, Object.assign({}, opts, {headers}));
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+const fmt = (iso) => iso ? new Date(iso).toLocaleDateString("de-DE", {dateStyle: "medium"}) : "—";
+const fmtT = (iso) => iso ? new Date(iso).toLocaleString("de-DE", {dateStyle:"medium", timeStyle:"short"}) : "—";
+
+const STAND = {
+  active: ["gilt", "status-active"],
+  superseded: ["abgelöst", "status-superseded"],
+  retracted: ["zurückgezogen", "status-retracted"],
+  erased: ["gelöscht", "status-erased"],
+};
+
+let state = {subject: null, selected: null};
+
+async function loadSubjects() {
+  const data = await api("/v1/subjects");
+  const sel = $("subject");
+  sel.innerHTML = data.subjects.map(s => `<option value="${esc(s.subject_id)}">${esc(s.subject_id)}</option>`).join("")
+    || `<option value="">(noch niemand im Gedächtnis)</option>`;
+  if (state.subject) sel.value = state.subject;
+  state.subject = sel.value || null;
+}
+
+async function loadFacts() {
+  if (!state.subject) return;
+  const inactive = $("show-inactive").checked;
+  const data = await api(`/v1/subjects/${encodeURIComponent(state.subject)}/facts?include_inactive=${inactive}`);
+  const rows = data.facts.filter(f => f.status !== "erased");
+  $("facts").innerHTML = rows.map(f => {
+    const [label, cls] = STAND[f.status] || [f.status, ""];
+    return `<tr class="clickable" data-fact="${f.id}">
+      <td>${esc(f.content)}</td>
+      <td class="small">${fmt(f.valid_from)}</td>
+      <td class="small ${cls}">${esc(label)}</td></tr>`;
+  }).join("") || `<tr><td colspan="3" class="empty">Zu dieser Person ist nichts gespeichert.</td></tr>`;
+
+  document.querySelectorAll("#facts tr.clickable").forEach(row => {
+    row.addEventListener("click", () => {
+      document.querySelectorAll("#facts tr").forEach(r => r.classList.remove("selected"));
+      row.classList.add("selected");
+      state.selected = Number(row.dataset.fact);
+      showHistory(state.selected);
+    });
+  });
+}
+
+async function showHistory(factId) {
+  const data = await api(`/v1/facts/${factId}/history`);
+  const f = data.fact;
+  const steps = data.verlauf.map(v => `
+    <tr><td class="small">${fmtT(v.zeitpunkt)}</td>
+    <td>${esc(v.vorgang)}${v.abgeleitet_aus ? ` <span class="muted small">(aus Angabe ${v.abgeleitet_aus})</span>` : ""}</td>
+    <td class="small">${esc(v.begruendung || "—")}</td>
+    <td class="small">${v.ausloesender_beitrag
+        ? `„${esc(v.ausloesender_beitrag.wortlaut)}"<br><span class="muted">${fmtT(v.ausloesender_beitrag.gesagt_am)}</span>`
+        : "—"}</td></tr>`).join("");
+
+  $("history").innerHTML = `
+    <div class="notice"><b>${esc(f.content)}</b><br>
+      <span class="small">gilt seit ${fmt(f.valid_from)}${f.valid_to ? `, bis ${fmt(f.valid_to)}` : ""} ·
+      gespeichert am ${fmtT(f.recorded_at)}</span></div>
+    <table><thead><tr><th>Wann</th><th>Was geschah</th><th>Begründung</th><th>Auslösender Beitrag</th></tr></thead>
+    <tbody>${steps || `<tr><td colspan="4" class="empty">Kein Verlauf.</td></tr>`}</tbody></table>`;
+}
+
+async function loadReceipts() {
+  if (!state.subject) return;
+  const data = await api(`/v1/subjects/${encodeURIComponent(state.subject)}/erasures`);
+  $("receipts").innerHTML = data.belege.length ? `<table>
+    <thead><tr><th>Wann</th><th>Umfang</th><th>Betroffen</th><th>Grund</th></tr></thead><tbody>
+    ${data.belege.map(b => `<tr><td class="small">${fmtT(b.executed_at)}</td>
+      <td class="small">${b.scope === "subject" ? "gesamte Person" : "einzelne Angaben"}</td>
+      <td class="small mono">${(b.affected.facts || []).length} Angaben, ${(b.affected.turns || []).length} Beiträge</td>
+      <td class="small">${esc(b.reason || "—")}</td></tr>`).join("")}
+    </tbody></table>` : `<p class="empty">Für diese Person wurde noch nichts gelöscht.</p>`;
+}
+
+async function showPreview(factIds) {
+  const body = {confirm: false};
+  if (factIds) body.fact_ids = factIds;
+  const data = await api(`/v1/subjects/${encodeURIComponent(state.subject)}/erase`,
+    {method: "POST", body: JSON.stringify(body)});
+  const p = data.vorschau, c = p.counts;
+  const roots = new Set(p.roots);
+  const rows = p.facts.map(f => `<tr><td>${esc(f.content)}</td>
+    <td class="small">${roots.has(f.id) ? "ausgewählt" : '<span class="diff-del">daraus abgeleitet</span>'}</td></tr>`).join("");
+  $("erase-preview").innerHTML = `
+    <div class="notice warn small">
+      Betroffen: <b>${c.facts}</b> Angaben (davon ${c.derived} abgeleitet), ${c.edges} Beziehungen,
+      ${c.turns} Gesprächsbeiträge, ${c.trace_steps} Protokollschritte, ${c.entities} Knoten.<br>
+      Die Zeilen bleiben als Beleg stehen, ihr Inhalt wird geleert.
+    </div>
+    <table><thead><tr><th>Angabe</th><th>Grund</th></tr></thead><tbody>${
+      rows || `<tr><td colspan="2" class="empty">Nichts zu löschen.</td></tr>`}</tbody></table>
+    ${p.facts.length ? `<div class="row" style="margin-top:10px">
+      <input id="reason" placeholder="Grund (wird im Löschbeleg festgehalten)" style="flex:1">
+      <button id="confirm-erase" class="danger">Endgültig löschen</button></div>` : ""}`;
+
+  const btn = $("confirm-erase");
+  if (btn) btn.addEventListener("click", async () => {
+    if (!confirm(`${c.facts} Angaben und ${c.turns} Beiträge werden unwiderruflich geleert. Fortfahren?`)) return;
+    btn.disabled = true;
+    const payload = {confirm: true, reason: $("reason").value || null};
+    if (factIds) payload.fact_ids = factIds;
+    const done = await api(`/v1/subjects/${encodeURIComponent(state.subject)}/erase`,
+      {method: "POST", body: JSON.stringify(payload)});
+    $("erase-preview").innerHTML =
+      `<div class="notice small">Gelöscht. Löschbeleg <b>${done.beleg.receipt_id}</b> vom ${fmtT(done.beleg.executed_at)}.</div>`;
+    state.selected = null;
+    $("history").innerHTML = `<p class="empty">Eine Angabe links anklicken.</p>`;
+    await loadFacts(); await loadReceipts();
+  });
+}
+
+$("preview-selected").addEventListener("click", () => {
+  if (!state.selected) { alert("Bitte zuerst links eine Angabe auswählen."); return; }
+  showPreview([state.selected]);
+});
+$("preview-all").addEventListener("click", () => showPreview(null));
+
+$("export").addEventListener("click", async () => {
+  const data = await api(`/v1/subjects/${encodeURIComponent(state.subject)}/export`);
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `auskunft-${state.subject}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+$("show-inactive").addEventListener("change", loadFacts);
+$("subject").addEventListener("change", e => { state.subject = e.target.value; state.selected = null; load(); });
+$("reload").addEventListener("click", load);
+
+async function load() {
+  try {
+    await loadSubjects();
+    if (state.subject) { await loadFacts(); await loadReceipts(); }
+  } catch (err) {
+    document.querySelector("main").insertAdjacentHTML("afterbegin",
+      `<div class="notice warn">Laden fehlgeschlagen: ${esc(err.message.slice(0, 300))}</div>`);
+  }
+}
+load();
+</script>
+</body>
+</html>

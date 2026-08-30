@@ -1,0 +1,12 @@
+title: Krankschreibung neben dem Arbeitsverhältnis
+pattern: Befristung
+turns:
+  - at: 2025-11-11
+    text: Ich arbeite bei Globex.
+  - at: 2026-05-06
+    text: Ich bin zurzeit krankgeschrieben.
+checkpoints:
+  - after: 2
+    query: Wo arbeitet er? Wie geht es ihm?
+    expect_present: [krankgeschrieben]
+    must_stay_active: [Globex]

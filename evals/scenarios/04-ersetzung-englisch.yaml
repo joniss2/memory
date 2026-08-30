@@ -1,0 +1,16 @@
+title: Umzug, englischsprachig
+pattern: Ersetzung
+description: >
+  Dieselbe Mechanik in einer zweiten Sprache. Prüft, ob Extraktion und
+  Konsolidierung an der Sprache hängen -- ein Muster, das nur auf Deutsch
+  greift, ist kein Muster, sondern ein Zufall.
+turns:
+  - at: 2025-09-01
+    text: I live in Hamburg.
+  - at: 2026-03-15
+    text: I moved to Rotterdam.
+checkpoints:
+  - after: 2
+    query: Where does he live? Wo wohnt er?
+    expect_present: [Rotterdam]
+    expect_absent: [Hamburg]

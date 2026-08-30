@@ -1,0 +1,12 @@
+title: Sport wird zu Laufen
+pattern: Verfeinerung
+turns:
+  - at: 2026-01-20
+    text: Ich mag Sport.
+  - at: 2026-03-04
+    text: Ich mag vor allem Laufen.
+checkpoints:
+  - after: 2
+    query: Was mag er?
+    expect_present: [Laufen]
+    must_stay_active: [Sport]

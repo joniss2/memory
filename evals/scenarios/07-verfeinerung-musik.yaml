@@ -1,0 +1,12 @@
+title: Musik wird zu Jazz
+pattern: Verfeinerung
+turns:
+  - at: 2026-02-02
+    text: Ich mag Musik.
+  - at: 2026-05-19
+    text: Ich mag am liebsten Jazz.
+checkpoints:
+  - after: 2
+    query: Was mag er für Musik?
+    expect_present: [Jazz]
+    must_stay_active: [Musik]

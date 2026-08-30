@@ -1,0 +1,27 @@
+title: Umzug von Köln nach Leipzig
+pattern: Ersetzung
+description: >
+  Das Beispiel aus Abschnitt 9. Sechs Monate zwischen den Aussagen: der alte
+  Wert war nie falsch, er gilt nur nicht mehr. Die Löschung am Ende prüft
+  zusätzlich, ob die transitive Hülle greift -- Leipzig ist aus Köln
+  abgeleitet und muss mitgehen.
+turns:
+  - at: 2026-01-10
+    text: Ich wohne in Köln.
+  - at: 2026-06-14
+    text: Ich bin nach Leipzig gezogen.
+checkpoints:
+  - after: 1
+    name: vor dem Umzug
+    query: Wo wohnt er?
+    expect_present: [Köln]
+  - after: 2
+    name: nach dem Umzug
+    query: Wo wohnt er?
+    expect_present: [Leipzig]
+    expect_absent: [Köln]
+erasure:
+  after: 2
+  name: Löschung des Ursprungsfakts
+  facts_matching: Köln
+  residue: [Köln, Leipzig]

@@ -1,0 +1,32 @@
+# Variante mit getrennter Datenbank -- für alle, die Postgres ohnehin
+# betreiben. Der Regelfall ist das einzelne Image aus dem Dockerfile.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: provenance
+      POSTGRES_PASSWORD: provenance
+      POSTGRES_DB: provenance
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U provenance"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    environment:
+      PROVENANCE_EMBEDDED_POSTGRES: "0"
+      PROVENANCE_DATABASE_URL: postgresql://provenance:provenance@db:5432/provenance
+      PROVENANCE_LLM_PROVIDER: ${PROVENANCE_LLM_PROVIDER:-heuristic}
+      PROVENANCE_LLM_BASE_URL: ${PROVENANCE_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
