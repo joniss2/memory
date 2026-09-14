@@ -1,0 +1,17 @@
+title: Elternzeit neben dem Arbeitsverhältnis
+pattern: Befristung
+description: >
+  Das Beispiel aus Abschnitt 9. Elternzeit ist ein vorübergehender Zustand,
+  kein Ersatz für das Arbeitsverhältnis. Wer beides verwechselt, verliert den
+  Arbeitgeber.
+preconditions: [Elternzeit]
+turns:
+  - at: 2025-06-01
+    text: Ich arbeite bei ACME.
+  - at: 2026-04-01
+    text: Ich bin gerade in Elternzeit.
+checkpoints:
+  - after: 2
+    query: Was macht er beruflich? Wo arbeitet er?
+    expect_present: [Elternzeit]
+    must_stay_active: [ACME]

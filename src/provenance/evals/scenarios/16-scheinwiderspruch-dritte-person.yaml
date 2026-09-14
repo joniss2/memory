@@ -1,0 +1,18 @@
+title: Aussage über eine dritte Person
+pattern: Scheinwiderspruch
+description: >
+  „Meine Schwester wohnt in München" ist kein Fakt über die betroffene
+  Person. Wird er trotzdem als einer abgelegt, löst er den eigenen Wohnort ab
+  -- beide Sätze belegen dasselbe einwertige Prädikat.
+preconditions: [München]
+turns:
+  - at: 2026-01-22
+    text: Ich wohne in Dresden.
+  - at: 2026-04-09
+    text: Meine Schwester wohnt in München.
+checkpoints:
+  - after: 2
+    query: Wo wohnt er?
+    expect_present: [Dresden]
+    expect_absent: [München]
+    must_stay_active: [Dresden]

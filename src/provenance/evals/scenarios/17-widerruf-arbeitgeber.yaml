@@ -1,0 +1,20 @@
+title: Widerruf der Angaben zum Arbeitgeber
+pattern: Widerruf
+description: >
+  Das Beispiel aus Abschnitt 9. Der Widerruf nennt das Thema, nicht den Wert
+  -- „Arbeitgeber" liegt im Vektorraum nicht neben „Arbeitet bei ACME". Ein
+  rein ähnlichkeitsbasierter Zugriff findet den zu widerrufenden Fakt nicht.
+turns:
+  - at: 2025-10-01
+    text: Ich arbeite bei ACME.
+  - at: 2026-07-07
+    text: Vergiss, was ich über meinen Arbeitgeber gesagt habe.
+checkpoints:
+  - after: 1
+    name: vor dem Widerruf
+    query: Wo arbeitet er?
+    expect_present: [ACME]
+  - after: 2
+    name: nach dem Widerruf
+    query: Wo arbeitet er?
+    expect_absent: [ACME]

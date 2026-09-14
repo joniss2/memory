@@ -1,0 +1,49 @@
+# Variante mit getrennter Datenbank -- für alle, die Postgres ohnehin
+# betreiben. Der Regelfall ist das einzelne Image aus dem Dockerfile.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: provenance
+      POSTGRES_PASSWORD: provenance
+      POSTGRES_DB: provenance
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U provenance"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    environment:
+      PROVENANCE_EMBEDDED_POSTGRES: "0"
+      PROVENANCE_DATABASE_URL: postgresql://provenance:provenance@db:5432/provenance
+      PROVENANCE_LLM_PROVIDER: ${PROVENANCE_LLM_PROVIDER:-heuristic}
+      PROVENANCE_LLM_BASE_URL: ${PROVENANCE_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      # Der Schalter hebt die Transportprüfung für *jeden* Endpunkt auf, nicht
+      # nur für den Nachbarn auf der Docker-Brücke. Deshalb bleibt er hier aus:
+      # eine ausgelieferte Vorgabe, die Klartext erlaubt, verlässt sich darauf,
+      # dass jemand sie zurücksetzt, bevor er das Modell übers Netz anspricht.
+      #
+      # Wer den lokalen Weg über host.docker.internal (http) benutzt, setzt ihn
+      # bewusst -- in der .env oder beim Aufruf:
+      #   PROVENANCE_LLM_ALLOW_INSECURE_HTTP=true docker compose up
+      # Ohne das lehnt der Dienst die http-Adresse ab und sagt genau das.
+      # Mit PROVENANCE_LLM_PROVIDER=heuristic (Vorgabe) wird sie nie benutzt.
+      PROVENANCE_LLM_ALLOW_INSECURE_HTTP: ${PROVENANCE_LLM_ALLOW_INSECURE_HTTP:-false}
+      PROVENANCE_API_TOKEN: ${PROVENANCE_API_TOKEN:-}
+      PROVENANCE_ALLOW_UNAUTHENTICATED: ${PROVENANCE_ALLOW_UNAUTHENTICATED:-false}
+    extra_hosts:
+      # Unter nativem Linux gibt es host.docker.internal sonst nicht, und der
+      # lokale Modellpfad scheitert schon an der Namensauflösung.
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

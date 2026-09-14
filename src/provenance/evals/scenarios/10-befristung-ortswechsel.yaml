@@ -1,0 +1,17 @@
+title: Vorübergehend woanders
+pattern: Befristung
+description: >
+  „Ich bin gerade in Berlin" ist kein Umzug. Die beiden Sätze sind einander
+  im Vektorraum sehr nah -- ein rein ähnlichkeitsgetriebenes System löst hier
+  den Wohnort ab und merkt es nie.
+preconditions: [Berlin]
+turns:
+  - at: 2026-01-05
+    text: Ich wohne in Köln.
+  - at: 2026-06-02
+    text: Ich bin gerade in Berlin.
+checkpoints:
+  - after: 2
+    query: Wo wohnt er? Wo ist er?
+    expect_present: [Berlin]
+    must_stay_active: [Köln]

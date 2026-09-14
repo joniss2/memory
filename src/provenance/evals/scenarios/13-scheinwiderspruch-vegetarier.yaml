@@ -1,0 +1,23 @@
+title: Vegetarier bestellt Burger für die Kollegen
+pattern: Scheinwiderspruch
+description: >
+  Der klassische Fehlerfall aus Abschnitt 5, Stufe 2: die Ähnlichkeit ist
+  hoch, die Begründung klingt plausibel, und drei Monate später ist der
+  korrekte Fakt still verschwunden. Der Kontext -- die Bestellung war für
+  andere -- steht direkt daneben.
+preconditions: [Burger]
+turns:
+  - at: 2026-02-03
+    text: Ich esse kein Fleisch.
+  - at: 2026-05-12
+    text: Ich habe für die Kollegen Burger bestellt.
+checkpoints:
+  - after: 2
+    query: Was isst er? Ernährt er sich vegetarisch?
+    expect_present: [Fleisch]
+    must_stay_active: [Fleisch]
+erasure:
+  after: 2
+  name: Löschung der Ernährungsangabe
+  facts_matching: Fleisch
+  residue: [Fleisch]

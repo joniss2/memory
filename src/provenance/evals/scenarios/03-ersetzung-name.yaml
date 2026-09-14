@@ -1,0 +1,16 @@
+title: Namensänderung
+pattern: Ersetzung
+description: >
+  Ein Name ist einwertig und wechselt selten -- aber wenn, dann ist der alte
+  Wert sofort falsch. Ein System, das hier den alten Namen weiterliefert,
+  fällt bei jeder Anrede auf.
+turns:
+  - at: 2024-05-05
+    text: Ich heiße Jonas Meier.
+  - at: 2026-04-20
+    text: Ich heiße jetzt Jonas Weber.
+checkpoints:
+  - after: 2
+    query: Wie heißt er?
+    expect_present: [Weber]
+    expect_absent: [Meier]

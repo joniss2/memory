@@ -1,0 +1,27 @@
+title: Widerruf und anschließende vollständige Löschung
+pattern: Widerruf
+description: >
+  Der Endpunkt der Kette: erst der Widerruf einer einzelnen Angabe, dann die
+  vollständige Löschung der betroffenen Person. Danach darf keiner der
+  genannten Werte irgendwo mehr auftauchen -- weder in den Fakten noch im
+  Rohmaterial, in den Knoten oder im Auditlog.
+turns:
+  - at: 2025-12-01
+    text: Ich arbeite bei Umbrella.
+  - at: 2026-01-15
+    text: Ich wohne in Bonn.
+  - at: 2026-02-20
+    text: Ich mag Kaffee.
+  - at: 2026-06-30
+    text: Vergiss, was ich über meinen Arbeitgeber gesagt habe.
+checkpoints:
+  - after: 4
+    name: nach dem Widerruf
+    query: Wo arbeitet er? Wo wohnt er?
+    expect_absent: [Umbrella]
+    expect_present: [Bonn]
+    must_stay_active: [Bonn]
+erasure:
+  after: 4
+  name: vollständige Löschung der Person
+  residue: [Umbrella, Bonn, Kaffee]

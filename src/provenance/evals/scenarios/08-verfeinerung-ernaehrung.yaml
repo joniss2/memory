@@ -1,0 +1,15 @@
+title: Kein Fleisch, aber Fisch
+pattern: Verfeinerung
+description: >
+  Zwei Aussagen zur Ernährung, die einander ergänzen statt zu widersprechen.
+  Ein System, das auf Themenähnlichkeit ablöst, verliert hier eine der beiden.
+turns:
+  - at: 2026-01-14
+    text: Ich esse kein Fleisch.
+  - at: 2026-01-28
+    text: Ich esse gern Fisch.
+checkpoints:
+  - after: 2
+    query: Was isst er?
+    expect_present: [Fisch]
+    must_stay_active: [Fleisch]

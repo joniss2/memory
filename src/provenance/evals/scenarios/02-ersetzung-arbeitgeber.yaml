@@ -1,0 +1,17 @@
+title: Arbeitgeberwechsel ACME → Globex
+pattern: Ersetzung
+description: >
+  Einwertiges Prädikat: wer bei Globex anfängt, arbeitet nicht mehr bei ACME.
+turns:
+  - at: 2025-03-02
+    text: Ich arbeite bei ACME.
+  - at: 2026-02-01
+    text: Ich arbeite jetzt bei Globex.
+checkpoints:
+  - after: 1
+    query: Wo arbeitet er?
+    expect_present: [ACME]
+  - after: 2
+    query: Wo arbeitet er?
+    expect_present: [Globex]
+    expect_absent: [ACME]
