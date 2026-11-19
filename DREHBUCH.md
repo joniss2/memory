@@ -6,6 +6,8 @@ Schnitt in der Beschreibung: Warnung, Modell, Unlock, Magisk, Odin, Root-Beweis,
 
 ## Hook und Warnung
 
+**Aufnahme:** `.\record-display.ps1 -Kapitel warnung`
+
 **Bild:** Laptop-Browser noch leer, Handy am Kabel.
 
 **Satz zum Einsprechen:**
@@ -18,6 +20,8 @@ Schnitt in der Beschreibung: Warnung, Modell, Unlock, Magisk, Odin, Root-Beweis,
 - Den Satz in einem Zug sprechen. In dieser Szene noch kein Odin und keine Firmware-Datei öffnen.
 
 ## Modell
+
+**Aufnahme:** `.\record-display.ps1 -Kapitel modell`
 
 **Bild:** Einstellungen, Telefoninfo, langsam durchgehen. Danach ein kurzer Blick in den Download-Modus, ohne die Lauter-Taste lange zu halten.
 
@@ -38,6 +42,8 @@ Schnitt in der Beschreibung: Warnung, Modell, Unlock, Magisk, Odin, Root-Beweis,
 
 ## Backup und OEM
 
+**Aufnahme:** `.\record-display.ps1 -Kapitel oem`
+
 **Bild:** Galerie und Konten, schon leer oder gesichert. Danach die Entwickleroptionen.
 
 **Satz zum Einsprechen:**
@@ -54,6 +60,8 @@ Schnitt in der Beschreibung: Warnung, Modell, Unlock, Magisk, Odin, Root-Beweis,
 **Schnitt wenn:** Der Schalter „OEM-Entsperrung“ fehlt. Dieses Kapitel ist das Ende der Aufnahme.
 
 ## Bootloader
+
+**Aufnahme:** zweite Kamera aufs Handy. Danach wieder USB-Debugging und `.\record-display.ps1 -Kapitel unlock`
 
 **Bild:** Warnhinweis im Download-Modus auf dem Handy-Display. Nach dem Wipe die Ersteinrichtung, danach noch einmal `OEM LOCK: OFF`.
 
@@ -73,6 +81,8 @@ Schnitt in der Beschreibung: Warnung, Modell, Unlock, Magisk, Odin, Root-Beweis,
 
 ## AP patchen
 
+**Aufnahme:** `.\record-display.ps1 -Kapitel magisk`
+
 **Bild:** Freier Speicher, die Magisk-App von GitHub, die eigene AP-Datei, danach die gepatchte TAR auf dem PC.
 
 **Satz zum Einsprechen:**
@@ -88,6 +98,8 @@ Schnitt in der Beschreibung: Warnung, Modell, Unlock, Magisk, Odin, Root-Beweis,
 - Die neue Datei liegt unter `Download/magisk_patched-....tar`. Zurück auf den PC kopieren. Sie bleibt `.tar`.
 
 ## Odin
+
+**Aufnahme:** zweite Kamera und PC-Bildschirm. Vorher scrcpy und OBS-Spiegel stoppen. Kapitelname für Notizen: `odin`
 
 **Bild:** Odin als Administrator, die COM-Anzeige ist blau, Auto Reboot ist aus. Download-Modus und Odin vom Handy-Display filmen, den PC-Bildschirm separat. scrcpy und Odin teilen sich den USB-Anschluss.
 
@@ -112,23 +124,32 @@ Schnitt in der Beschreibung: Warnung, Modell, Unlock, Magisk, Odin, Root-Beweis,
 
 ## Root-Beweis
 
+**Aufnahme:** `.\record-display.ps1 -Kapitel root`
+
 **Bild:** Magisk mit dem Status „Installiert“, dann Termux von F-Droid und die Zeile `uid=0(root)`.
 
 **Satz zum Einsprechen:**
 
-> Ich richte das Handy noch einmal ein und öffne Magisk. Die App will oft noch eine Zusatz-Einrichtung und einen Neustart. Danach steht dort Installiert. Termux hole ich von F-Droid, nicht aus dem Play Store. Wenn dort uid=0(root) steht, ist der Root-Teil zu Ende.
+> Ich richte das Handy noch einmal ein und öffne Magisk. Die App will oft noch eine Zusatz-Einrichtung und einen Neustart. Danach steht dort Installiert. Termux hole ich von F-Droid, nicht aus dem Play Store. Magisk 31.1 fragt nicht mehr von selbst. Ich schalte Termux im Reiter Superuser ein. Wenn dort uid=0(root) steht, ist der Root-Teil zu Ende.
 
 **Schritte:**
 
 - Die Ersteinrichtung noch einmal durchlaufen.
 - Magisk öffnen. Die angebotene Zusatz-Einrichtung bestätigen und neu starten, wenn die App danach fragt.
-- Danach steht dort „Installiert“.
+- Danach steht dort „Installiert“. Die App ist `tools\Magisk-v31.1.apk` von [github.com/topjohnwu/Magisk](https://github.com/topjohnwu/Magisk).
 - Termux von F-Droid installieren.
-- Die Befehle in Termux ausführen. Magisk fragt beim ersten `su` nach der Freigabe. Das mitfilmen.
+- In Termux die Befehle bis zum ersten `su` ausführen. Ein Dialog kommt nicht.
 
 ```bash
 pkg update && pkg upgrade -y
 pkg install tsu -y
+su
+```
+
+- Zurück zu Magisk, Reiter Superuser, Termux einschalten. Das ist die Freigabe im Bild.
+- Wieder in Termux:
+
+```bash
 su
 id
 ```
@@ -136,6 +157,8 @@ id
 - `uid=0(root)` ist die Szene, die den Root-Teil abschließt.
 
 ## Debian und Dashboard
+
+**Aufnahme:** `.\record-display.ps1 -Kapitel debian`, danach Laptop mit `.\record-display.ps1 -Kapitel dashboard` bzw. Browser auf dem PC. Vorschau ohne Handy: `.\serve-dashboard.ps1`
 
 **Bild:** Termux, danach der Laptop-Browser mit der eigenen Seite auf Port 8080 und mit Glances auf Port 61208.
 
@@ -173,6 +196,8 @@ glances -w -B 0.0.0.0
 
 ## Dauerbetrieb
 
+**Aufnahme:** `.\record-display.ps1 -Kapitel dauerbetrieb`
+
 **Bild:** Akku-Einstellungen, danach das dunkle Display, und der Laptop, der die Seite neu lädt.
 
 **Satz zum Einsprechen:**
@@ -196,10 +221,12 @@ termux-wake-lock
 - Akku, Termux, Uneingeschränkt.
 - Akku, Akku schützen, Grenze etwa 85 Prozent. Das Handy bleibt am Netzteil, mit Luft dahinter, nicht unter einem Kissen.
 - WLAN, erweitert, WLAN im Ruhezustand aktiv lassen.
-- Termux:Boot von F-Droid installieren. `phone/start.sh` als `~/.termux/boot/start.sh` ablegen. Die Datei holt den Wake-Lock und startet im Debian Nginx und Glances im Hintergrund.
+- Termux:Boot von F-Droid installieren. `phone/start.sh` als `~/.termux/boot/start.sh` ablegen und ausführbar machen: `chmod +x ~/.termux/boot/start.sh`. Die Datei holt den Wake-Lock und startet im Debian Nginx und Glances im Hintergrund.
 - Display ausschalten. Auf dem Laptop die Seite neu laden. Sie muss noch da sein. Das ist der Schlusstest.
 
 ## Ausblick
+
+**Aufnahme:** `.\record-display.ps1 -Kapitel ausblick`
 
 **Bild:** Glances auf dem Laptop, das Handy daneben. Den Raspberry Pi nicht anschließen und Minecraft nicht starten.
 
