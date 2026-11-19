@@ -1,0 +1,25 @@
+{
+    "files.readonlyInclude": {
+        "{**/.c4z/.extsrcs/*.PROTSYM.cbl,**/.c4z/.extsrcs/*.PROTSYM.listing}": true
+    },
+    "workbench.editor.alwaysShowEditorActions": true,
+    "workbench.editor.autoLockGroups": {
+        "workbench.editor.markdownPlan": true,
+        "jupyter-notebook": true,
+        "workbench.editorinputs.searchEditorInput": true,
+        "workbench.editor.composer": true,
+        "workbench.editor.browserEditor": true,
+        "default": true,
+        "workbench.editor.cursorblame": true,
+        "workbench.editor.cursorfileblame": true,
+        "workbench.editor.reviewchanges.input": true,
+        "vscode.videoPreview": true,
+        "vscode.audioPreview": true,
+        "imagePreview.previewEditor": true,
+        "workbench.editor.markdown": true,
+        "mainThreadWebview-markdown.preview": true,
+        "workbench.input.interactive": true,
+        "workbench.editors.gettingStartedInput": true
+    },
+    "workbench.editor.closeOnFileDelete": true
+}
