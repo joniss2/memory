@@ -14,6 +14,7 @@ Vor der Aufnahme `CHECKLISTE.md` abhaken. CSC und Build stehen noch nicht fest: 
 | `phone/index.html` | Startseite „A14 Server“, live nach `/var/www/html/index.html` |
 | `phone/start.sh` | später `~/.termux/boot/start.sh` |
 | `record-display.ps1` | Display über USB ohne Ton nach `aufnahmen/` |
+| `obs/usb-handy-spiegel.py` | Dieselben USB-Handys als Quelle in OBS |
 
 ```powershell
 .\record-display.ps1 -NurAnzeigen
@@ -21,5 +22,7 @@ Vor der Aufnahme `CHECKLISTE.md` abhaken. CSC und Build stehen noch nicht fest: 
 ```
 
 Stoppen mit Strg+C im selben Fenster. Ein Kapitel pro Datei, zum Beispiel `warnung`, `modell`, `magisk`, `debian`, `dashboard`.
+
+Für OBS das Skript `obs/usb-handy-spiegel.py` unter Werkzeuge, Skripte laden. Python 3.12 64-bit ist installiert; unter Python-Einstellungen den Ordner `%LocalAppData%\Programs\Python\Python312` eintragen. Jedes USB-Handy wird eine Quelle `Handy <Modell>` in der aktuellen Szene. Das scrcpy-Fenster bleibt offen und wird nicht minimiert. Vor Odin im Skript **Alle Spiegel stoppen**. Nicht gleichzeitig mit `record-display.ps1` auf demselben Handy.
 
 Odin ist **3.14.1** aus dem XDA-Thread „Patched Odin“, Auto Reboot bleibt aus. Die vier Dateien sind BL, AP, CP und CSC. `HOME_CSC` kommt nicht ins Programm. Magisk nur von der offiziellen Release auf GitHub, topjohnwu. Nginx hört auf Port **8080**, Glances mit `glances -w -B 0.0.0.0`.

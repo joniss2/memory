@@ -9,6 +9,7 @@ CSC und Build sind noch unbekannt. In diesem Ordner liegt keine Firmware, und si
 - [ ] Frija, Bifrost oder SamFw bereit
 - [ ] Datenkabel, kein reines Ladekabel
 - [ ] scrcpy installiert (`winget install --id Genymobile.scrcpy -e`)
+- [ ] OBS-Spiegel nur für die Aufnahme in OBS: `obs/usb-handy-spiegel.py` unter Werkzeuge, Skripte. Vor Odin alle Spiegel stoppen. Nicht gleichzeitig mit `record-display.ps1`
 - [ ] USB-Debugging an. Nach dem Einstecken den Dialog mit **Immer von diesem Computer zulassen** bestätigen. USB-Modus: Dateiübertragung
 - [ ] Kurztest ohne Datei: `.\record-display.ps1 -NurAnzeigen`. Das Display steht im Fenster, bevor eine Aufnahme startet
 - [ ] Aufnahme ohne Ton, ein Kapitel pro Datei: `.\record-display.ps1 -Kapitel modell`. Stoppen mit Strg+C
