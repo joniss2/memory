@@ -15,7 +15,10 @@ Vor der Aufnahme `CHECKLISTE.md` abhaken. Liegt das Handy im USB-Debugging, lies
 | `phone/start.sh` | später `~/.termux/boot/start.sh` |
 | `verify-prep.ps1` | Treiber, Odin, Magisk, Bifrost, `geraet.txt`, firmware\ prüfen |
 | `prep-geraet.ps1` | Modell, Build und CSC per adb, ohne Seriennummer |
+| `warte-auf-handy.ps1` | wartet auf USB-Debugging, dann `prep-geraet` und Bifrost |
+| `push-phone-kit.ps1` | Magisk und `phone/*` per adb oder CrossDevice nach Documents/A14 |
 | `open-bifrost.ps1` | Bifrost mit der CSC aus `geraet.txt`, Ziel `firmware\` |
+| `TAKES.md` | Take-Reihenfolge Unlock, Magisk, Dashboard |
 | `serve-dashboard.ps1` | lokale Vorschau von `phone/index.html` auf Port 8080 |
 | `record-display.ps1` | Display über USB ohne Ton nach `aufnahmen/` |
 | `obs/usb-handy-spiegel.py` | Dieselben USB-Handys als Quelle in OBS |
@@ -28,10 +31,11 @@ Reihenfolge vor dem ersten Take:
 
 ```powershell
 .\verify-prep.ps1
-.\prep-geraet.ps1
-.\open-bifrost.ps1
+.\warte-auf-handy.ps1
 .\verify-prep.ps1
 ```
+
+Oder einzeln: `.\prep-geraet.ps1`, dann `.\open-bifrost.ps1`. Take-Liste: `TAKES.md`.
 
 Aufnahme ohne Ton, ein Kapitel pro Datei. Stoppen mit Strg+C im selben Fenster.
 
@@ -51,6 +55,8 @@ Aufnahme ohne Ton, ein Kapitel pro Datei. Stoppen mit Strg+C im selben Fenster.
 ```
 
 Laptop-Browser vor dem echten Handy: `.\serve-dashboard.ps1`, dann `http://127.0.0.1:8080`.
+
+Liegt das Handy nur in CrossDevice (`Sushi.test`) und noch nicht in `adb devices`, die Dateien unter `Documents/A14` auf dem Gerät nutzen (Magisk, `debian-setup.sh`, `index.html`, `start.sh`). Für CSC und Firmware trotzdem USB-Debugging und `.\warte-auf-handy.ps1`.
 
 Für OBS das Skript `obs/usb-handy-spiegel.py` unter Werkzeuge, Skripte laden. Python 3.12 64-bit ist installiert; unter Python-Einstellungen den Ordner `%LocalAppData%\Programs\Python\Python312` eintragen. Jedes USB-Handy wird eine Quelle `Handy <Modell>` in der aktuellen Szene. Das scrcpy-Fenster bleibt offen und wird nicht minimiert. Vor Odin im Skript **Alle Spiegel stoppen**. Nicht gleichzeitig mit `record-display.ps1` auf demselben Handy.
 
