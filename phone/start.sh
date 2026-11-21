@@ -2,6 +2,8 @@
 # Termux:Boot. Liegt auf dem Handy unter ~/.termux/boot/start.sh
 # Wake-Lock holen, dann Nginx (8080) und Glances (0.0.0.0:61208) im Debian starten.
 # Termux muss in Magisk unter Superuser schon freigegeben sein.
+# Tailscale läuft als Android-App und startet mit dem System.
+# Dieses Skript startet sie nicht und installiert kein tailscaled.
 
 termux-wake-lock
 

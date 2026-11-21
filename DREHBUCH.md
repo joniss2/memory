@@ -187,7 +187,7 @@ pip install --break-system-packages "glances[web]"
 glances -w -B 0.0.0.0
 ```
 
-- `phone/index.html` live nach `/var/www/html/index.html` legen. Den Platzhalter durch die IP des Handys ersetzen. Die Seite heißt „A14 Server“ und verlinkt diese Seite auf Port 8080 und Glances auf Port 61208.
+- `phone/index.html` live nach `/var/www/html/index.html` legen. `192.168.x.x` durch die IP des Handys ersetzen. `100.x.y.z` bleibt bis zum Ausblick der Platzhalter und kommt erst aus der Tailscale-App. Die Seite heißt „A14 Server“ und verlinkt diese Seite auf Port 8080 und Glances auf Port 61208, jeweils im LAN und im Tailnet.
 - Vom Laptop `http://<handy-ip>:8080` öffnen. Das ist die Nginx-Seite.
 - Vom Laptop `http://<handy-ip>:61208` öffnen. Das ist Glances.
 - Uptime Kuma kommt in dieser Folge nicht vor.
@@ -228,14 +228,16 @@ termux-wake-lock
 
 **Aufnahme:** `.\record-display.ps1 -Kapitel ausblick`
 
-**Bild:** Glances auf dem Laptop, das Handy daneben. Den Raspberry Pi nicht anschließen und Minecraft nicht starten.
+**Bild:** Laptop lädt die Seite über die Tailscale-Adresse, während das Handy nicht im Heim-LAN ist. Glances daneben. Den Raspberry Pi nicht anschließen und Minecraft nicht starten. Keine Router-Portfreigabe ins Bild.
 
 **Satz zum Einsprechen:**
 
-> Minecraft und alles, was dauerhaft laufen soll, kommt auf einen Raspberry Pi 5 mit 8 GB, Aktivkühlung und SSD. Dieses Handy bleibt der Knoten, den ich hier in Glances sehe. Von unterwegs erreiche ich es später über Tailscale, ohne Ports am Router zu öffnen.
+> Minecraft und alles, was dauerhaft laufen soll, kommt auf einen Raspberry Pi 5 mit 8 GB, Aktivkühlung und SSD. Dieses Handy bleibt der Knoten, den ich hier in Glances sehe. Von unterwegs erreiche ich es über Tailscale, ohne Ports am Router zu öffnen.
 
 **Schritte:**
 
 - Etwa 30 bis 40 Sekunden. Der Dimensity 700 und 4 bis 6 GB RAM reichen für einen kurzen Test, nicht für den Server, der später mit Freunden laufen soll.
-- Tailscale etwa 20 Sekunden zeigen, wenn die App schon eingeloggt ist.
+- Die offizielle Tailscale-App ist eingeloggt, Akku uneingeschränkt. Kein Tailscale-Paket in Termux oder Debian, Funnel aus.
+- Handy ins Mobilfunknetz, oder den Laptop in ein anderes Netz. Dann auf dem Laptop `http://<100.x-adresse>:8080` und `:61208` öffnen. Die Adresse aus der App steht nur in der live `index.html` auf dem Handy, im Repo bleibt `100.x.y.z`.
+- Vor der Veröffentlichung die `100.x`-Adresse und den MagicDNS-Namen unkenntlich machen.
 - Eine Portfreigabe für 8080 oder 25565 nicht filmen.

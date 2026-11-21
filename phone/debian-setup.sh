@@ -38,6 +38,25 @@ glances -w -B 0.0.0.0
 # nginx -s reload
 # Vom Laptop: http://<handy-ip>:8080 und http://<handy-ip>:61208
 
+# --- Tailscale (offizielle Android-App, nicht im Debian) ---
+# Tailscale nicht in Termux oder Debian installieren. Ein zweiter Daemon
+# kämpft mit der App. Funnel nicht einschalten: das Handy bleibt im Tailnet,
+# nicht öffentlich im Internet. Kein Auth-Key in dieses Repo.
+# 1. Tailscale aus dem Play Store installieren und einmal einloggen.
+# 2. Akku, Tailscale, Uneingeschränkt. Die App startet mit Android.
+#    phone/start.sh startet sie nicht.
+# 3. Nginx und Glances bleiben an 0.0.0.0 (8080 und 61208).
+#    Nicht an die LAN-IP binden, sonst ist das Tailnet blind.
+# 4. Die 100.x-Adresse aus der App in die live index.html auf dem Handy
+#    statt 100.x.y.z eintragen. Den MagicDNS-Namen nur auf dem Gerät,
+#    nicht ins Repo.
+#    nano /var/www/html/index.html
+#    nginx -s reload
+# 5. Laptop im selben Tailnet, nicht im Heim-LAN (Mobilfunk am Handy
+#    oder Laptop in einem anderen Netz):
+#    http://<100.x-adresse>:8080 und http://<100.x-adresse>:61208
+#    Am Router keine Portfreigabe für 8080 oder 61208.
+
 # --- Einmalig in Termux, mit Root ---
 # Damit Android Nginx und Glances nicht sofort beendet.
 # su -c 'settings put global settings_enable_monitor_phantom_procs false'

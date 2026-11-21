@@ -11,7 +11,7 @@ Vor der Aufnahme `CHECKLISTE.md` abhaken. Liegt das Handy im USB-Debugging, lies
 | `DREHBUCH.md` | Teleprompter, ein Abschnitt pro Kapitel |
 | `CHECKLISTE.md` | PC, Handy, Firmware-Dateinamen, Unkenntlichmachen, Abbruch |
 | `phone/debian-setup.sh` | Befehle für Termux und Debian, in der Nahaufnahme mitlesen |
-| `phone/index.html` | Startseite „A14 Server“, live nach `/var/www/html/index.html` |
+| `phone/index.html` | Startseite „A14 Server“, LAN `192.168.x.x` und Tailscale `100.x.y.z`, live nach `/var/www/html/index.html` |
 | `phone/start.sh` | später `~/.termux/boot/start.sh` |
 | `verify-prep.ps1` | Treiber, Odin, Magisk, Bifrost, `geraet.txt`, firmware\ prüfen |
 | `prep-geraet.ps1` | Modell, Build und CSC per adb, ohne Seriennummer |
@@ -60,4 +60,4 @@ Liegt das Handy nur in CrossDevice (`Sushi.test`) und noch nicht in `adb devices
 
 Für OBS das Skript `obs/usb-handy-spiegel.py` unter Werkzeuge, Skripte laden. Python 3.12 64-bit ist installiert; unter Python-Einstellungen den Ordner `%LocalAppData%\Programs\Python\Python312` eintragen. Jedes USB-Handy wird eine Quelle `Handy <Modell>` in der aktuellen Szene. Das scrcpy-Fenster bleibt offen und wird nicht minimiert. Vor Odin im Skript **Alle Spiegel stoppen**. Nicht gleichzeitig mit `record-display.ps1` auf demselben Handy.
 
-Odin ist die Datei `tools\odin-patched\extracted\Odin3 v3.14.1_3B_PatcheD.exe` aus dem XDA-Thread „Patched Odin“, Auto Reboot bleibt aus. Die Fassung unter `Downloads\Odin3_v3.14.4` nicht starten. Die vier Dateien sind BL, AP, CP und CSC. `HOME_CSC` kommt nicht ins Programm. Magisk nur als `tools\Magisk-v31.1.apk`, die offizielle Release von topjohnwu. Nginx hört auf Port **8080**, Glances mit `glances -w -B 0.0.0.0`.
+Odin ist die Datei `tools\odin-patched\extracted\Odin3 v3.14.1_3B_PatcheD.exe` aus dem XDA-Thread „Patched Odin“, Auto Reboot bleibt aus. Die Fassung unter `Downloads\Odin3_v3.14.4` nicht starten. Die vier Dateien sind BL, AP, CP und CSC. `HOME_CSC` kommt nicht ins Programm. Magisk nur als `tools\Magisk-v31.1.apk`, die offizielle Release von topjohnwu. Nginx hört auf Port **8080**, Glances mit `glances -w -B 0.0.0.0`. Tailscale ist die offizielle Android-App, nur im eigenen Tailnet: kein Paket in Debian, kein Funnel, kein Auth-Key im Repo. Die echte `100.x`-Adresse wird nur auf dem Handy eingetragen.

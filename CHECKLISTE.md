@@ -60,7 +60,7 @@ In Odin ist Auto Reboot aus. Nach `PASS` direkt ins Recovery und dort Factory da
 - [ ] WLAN-Name
 - [ ] Volle lokale IP in den Einstellungsseiten
 - [ ] COM-Nummer in Odin
-- [ ] Öffentliche Tailscale-Adresse
+- [ ] Tailscale-Adresse: die `100.x`-Adresse, der MagicDNS-Name und eine öffentliche Funnel-Adresse, falls sie im Bild ist
 
 ## Unlock filmen
 
@@ -86,11 +86,12 @@ Takes 5–7 in `TAKES.md`. Magisk nur als `tools\Magisk-v31.1.apk` (liegt auch u
 Takes 8–11 in `TAKES.md`. Skripte: `phone/debian-setup.sh`, `phone/index.html`, `phone/start.sh`.
 
 - [x] Drehbuch + Take-Liste + Skripte für Debian/Dashboard/Dauerbetrieb/Ausblick
+- [ ] Tailscale-App installiert und eingeloggt. Akku uneingeschränkt. Funnel aus. Kein zweites Tailscale in Termux oder Debian
 - [x] Lokale Vorschau ohne Handy: `.\serve-dashboard.ps1` (Titel „A14 Server“, Port 8080)
 - [ ] `debian` aufgenommen — Termux → Debian, Nginx 8080, Glances `0.0.0.0`
 - [ ] `dashboard` aufgenommen — `phone/index.html` mit Handy-IP, vom Laptop öffnen
 - [ ] `dauerbetrieb` aufgenommen — Wake-Lock, uneingeschränkter Akku, Display aus, Seite bleibt
-- [ ] `ausblick` aufgenommen — Pi 5, kein Minecraft-Start, Tailscale nur wenn schon eingeloggt
+- [ ] `ausblick` aufgenommen — Pi 5, kein Minecraft-Start, Laptop lädt die Seite über die Tailscale-Adresse, Handy nicht im Heim-LAN
 
 ## Wenn eine Szene scheitert
 

@@ -22,7 +22,7 @@ try {
 
 Write-Host "Dashboard: $prefix"
 Write-Host "Stoppen mit Strg+C."
-Write-Host "Vor der Aufnahme in phone\index.html die Platzhalter-IP durch die Handy-IP ersetzen."
+Write-Host "Vor der Aufnahme in phone\index.html 192.168.x.x und 100.x.y.z ersetzen. Die Tailscale-Adresse nur auf dem Handy eintragen."
 
 try {
     while ($listener.IsListening) {

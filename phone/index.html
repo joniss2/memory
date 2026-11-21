@@ -70,10 +70,12 @@
 <body>
   <main>
     <h1>A14 Server</h1>
-    <p>Debian auf diesem Galaxy A14 5G. Die Platzhalter-IP vor der Aufnahme ersetzen.</p>
+    <p>Debian auf diesem Galaxy A14 5G. Beide Platzhalter vor der Aufnahme ersetzen.</p>
     <dl>
       <dt>Handy-IP</dt>
       <dd>192.168.x.x</dd>
+      <dt>Tailscale</dt>
+      <dd>100.x.y.z</dd>
     </dl>
     <ul>
       <li>
@@ -83,6 +85,14 @@
       <li>
         <a href="http://192.168.x.x:61208/">Glances</a>
         <span>Port 61208</span>
+      </li>
+      <li>
+        <a href="http://100.x.y.z:8080/">Diese Seite, Tailscale</a>
+        <span>Nginx, Port 8080, Adresse aus der Tailscale-App</span>
+      </li>
+      <li>
+        <a href="http://100.x.y.z:61208/">Glances, Tailscale</a>
+        <span>Port 61208, gleiches Tailnet</span>
       </li>
     </ul>
   </main>
